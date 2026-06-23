@@ -117,6 +117,8 @@
 	"events_col_message": "消息",
 	"events_col_time": "时间",
 	"events_load_more": "加载更多",
+	"events_clear": "清除活动",
+	"events_clear_confirm": "确定要清除全部活动日志吗？此操作无法撤销。",
 	"settings_title": "设置",
 	"settings_media_server": "媒体服务器",
 	"settings_set_from_env": "由环境变量设置",

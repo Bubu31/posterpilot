@@ -135,12 +135,16 @@ for the complete reference:
 | `LANGUAGE`                                               | UI locale: `en` (default), `es`, `zh`, `ja`, `pt-BR`            |
 | `DATABASE_URL`                                           | libsql file URL (default `file:/data/posterpilot.db` in Docker) |
 | `KOMETA_ASSETS_DIR`                                      | where exported Kometa YAML is written (default `/kometa`)       |
+| `LOG_DIR`                                                | rotating log file folder (default `/data/logs` in Docker)       |
+| `EVENT_RETENTION`                                        | max activity-log rows kept in the db (default `2000`)           |
 | `PORT`                                                   | listen port (default `3000`)                                    |
 
 Two volumes matter:
 
 - **`/data`** — persistent SQLite db, settings, and history. Keep this on a
-  mounted volume so state survives container updates.
+  mounted volume so state survives container updates. The rotating log file
+  (`posterpilot.log`, ~5 MB × 5 files) lives at `/data/logs`, so this one volume
+  covers it too — no extra log mount is needed.
 - **`/kometa`** — mount your Kometa assets/config directory here so the exported
   YAML lands where Kometa reads it.
 

@@ -117,6 +117,8 @@
 	"events_col_message": "メッセージ",
 	"events_col_time": "時刻",
 	"events_load_more": "もっと読み込む",
+	"events_clear": "アクティビティを消去",
+	"events_clear_confirm": "アクティビティログをすべて消去しますか？この操作は取り消せません。",
 	"settings_title": "設定",
 	"settings_media_server": "メディアサーバー",
 	"settings_set_from_env": "環境変数で設定済み",

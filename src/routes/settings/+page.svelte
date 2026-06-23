@@ -123,6 +123,19 @@
 		loadEvents({ level, before: null });
 	}
 
+	let clearingEvents = $state(false);
+	async function clearEvents() {
+		if (!confirm(m.events_clear_confirm())) return;
+		clearingEvents = true;
+		try {
+			await fetch('/api/events', { method: 'DELETE' });
+			// Reload from the current filter so the freshly-cleared list reflects truth.
+			await loadEvents({ before: null });
+		} finally {
+			clearingEvents = false;
+		}
+	}
+
 	let serverType = $state<'plex' | 'jellyfin' | 'emby'>(data.config.serverType);
 
 	// Plex
@@ -534,6 +547,14 @@
 						{f.label()}
 					</button>
 				{/each}
+				<button
+					type="button"
+					onclick={clearEvents}
+					disabled={clearingEvents || events.length === 0}
+					class="btn btn-ghost ml-auto"
+				>
+					{m.events_clear()}
+				</button>
 			</div>
 
 			<div class="surface mt-4 overflow-hidden">

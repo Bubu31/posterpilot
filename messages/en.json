@@ -117,6 +117,8 @@
 	"events_col_message": "Message",
 	"events_col_time": "Time",
 	"events_load_more": "Load more",
+	"events_clear": "Clear activity",
+	"events_clear_confirm": "Clear the entire activity log? This cannot be undone.",
 	"settings_title": "Settings",
 	"settings_media_server": "Media server",
 	"settings_set_from_env": "Set from environment",

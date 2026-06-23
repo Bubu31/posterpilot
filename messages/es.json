@@ -117,6 +117,8 @@
 	"events_col_message": "Mensaje",
 	"events_col_time": "Hora",
 	"events_load_more": "Cargar más",
+	"events_clear": "Borrar actividad",
+	"events_clear_confirm": "¿Borrar todo el registro de actividad? Esto no se puede deshacer.",
 	"settings_title": "Ajustes",
 	"settings_media_server": "Servidor multimedia",
 	"settings_set_from_env": "Definido por entorno",

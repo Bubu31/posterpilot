@@ -23,8 +23,9 @@ specific version tag instead if you prefer reproducible upgrades.
 Two volumes matter:
 
 - **`/data`** — persistent app state: the SQLite database, your saved settings,
-  and the apply history. Keep this on a mounted volume so state survives
-  container updates.
+  the apply history, and the rotating log file (`/data/logs/posterpilot.log`).
+  Keep this on a mounted volume so state survives container updates; the log file
+  lives inside `/data`, so no extra volume is needed for it.
 - **`/kometa`** — mount your Kometa assets/config directory here so the exported
   YAML lands where Kometa reads it. Only needed if you use the Kometa export.
 

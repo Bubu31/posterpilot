@@ -1,11 +1,13 @@
 import { sql } from 'drizzle-orm';
 import { db } from './db';
 import { events } from './db/schema';
+import { resolveConfig } from './config';
 import { formatEventLine, type EventLevel } from './events-format';
+import { appendLogLine } from './log-file';
 
 export { formatEventLine, type EventLevel } from './events-format';
 
-/** How many of the most recent events to retain when pruning. */
+/** Fallback row cap used when the configured `eventRetention` is unavailable. */
 export const EVENT_RETENTION = 2000;
 
 /** Prune roughly every this-many inserts, to keep the table bounded cheaply. */
@@ -27,6 +29,8 @@ export async function logEvent(
 	if (level === 'error') console.error(line);
 	else if (level === 'warn') console.warn(line);
 	else console.log(line);
+	// Mirror to the rotating log file (best-effort; never throws).
+	appendLogLine(line);
 
 	try {
 		await db.insert(events).values({
@@ -45,11 +49,15 @@ export async function logEvent(
 	}
 }
 
-/** Delete all but the most recent `keep` events. */
-export async function pruneEvents(keep = EVENT_RETENTION): Promise<void> {
+/**
+ * Delete all but the most recent `keep` events. When `keep` is omitted, the
+ * configured `eventRetention` (env `EVENT_RETENTION`) is used.
+ */
+export async function pruneEvents(keep?: number): Promise<void> {
 	try {
+		const cap = keep ?? (await resolveConfig()).eventRetention ?? EVENT_RETENTION;
 		await db.run(
-			sql`delete from events where id not in (select id from events order by id desc limit ${keep})`
+			sql`delete from events where id not in (select id from events order by id desc limit ${cap})`
 		);
 	} catch (e) {
 		console.error(`[error] system: failed to prune events`, e);

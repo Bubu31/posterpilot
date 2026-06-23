@@ -1,6 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { listEvents, type EventLevelFilter } from '$lib/server/queries';
+import { clearEvents, listEvents, type EventLevelFilter } from '$lib/server/queries';
+import { logEvent } from '$lib/server/events';
 
 const PAGE_SIZE = 50;
 const LEVELS: EventLevelFilter[] = ['info', 'warn', 'error'];
@@ -21,4 +22,12 @@ export const GET: RequestHandler = async ({ url }) => {
 	const nextCursor = hasMore ? events[events.length - 1].id : null;
 
 	return json({ events, nextCursor });
+};
+
+/** Clear the entire activity log (Settings → Activity → "Clear activity"). */
+export const DELETE: RequestHandler = async () => {
+	await clearEvents();
+	// Leave a single breadcrumb so the cleared log is self-documenting.
+	await logEvent('info', 'system', 'Activity log cleared');
+	return json({ ok: true });
 };

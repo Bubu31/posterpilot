@@ -220,3 +220,8 @@ export async function listEvents(
 		.orderBy(desc(events.id))
 		.limit(limit);
 }
+
+/** Delete every activity-log row (the Settings "Clear activity" action). */
+export async function clearEvents(): Promise<void> {
+	await db.delete(events);
+}

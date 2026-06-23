@@ -117,6 +117,8 @@
 	"events_col_message": "Mensagem",
 	"events_col_time": "Hora",
 	"events_load_more": "Carregar mais",
+	"events_clear": "Limpar atividade",
+	"events_clear_confirm": "Limpar todo o registro de atividade? Isso não pode ser desfeito.",
 	"settings_title": "Configurações",
 	"settings_media_server": "Servidor de mídia",
 	"settings_set_from_env": "Definido pelo ambiente",

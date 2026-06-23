@@ -19,7 +19,8 @@ WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
     DATABASE_URL=file:/data/posterpilot.db \
-    KOMETA_ASSETS_DIR=/kometa
+    KOMETA_ASSETS_DIR=/kometa \
+    LOG_DIR=/data/logs
 COPY package.json bun.lock ./
 RUN bun install --production --frozen-lockfile
 COPY --from=build /app/build ./build

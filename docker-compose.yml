@@ -27,7 +27,8 @@ services:
       PLEX_TOKEN: ${PLEX_TOKEN:-}
       TMDB_KEY: ${TMDB_KEY:-}
     volumes:
-      # Persistent app state (SQLite db + settings + history).
+      # Persistent app state (SQLite db + settings + history). The rotating log
+      # file lives at /data/logs (LOG_DIR), so this one volume covers it too.
       - ./data:/data
       # Mount your Kometa assets/config dir here so exported YAML is picked up.
       # Unraid example: /mnt/user/appdata/kometa/config:/kometa

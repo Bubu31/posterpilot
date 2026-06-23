@@ -115,6 +115,21 @@ with the header language switcher. Supported locales are English (`en`), Spanish
 (`pt-BR`). An unset or unsupported value falls through to `Accept-Language`, then
 English — never an error and never a raw key.
 
+## Logging and activity log
+
+Every operational event is recorded three ways: mirrored to the container
+console, inserted as a row in the in-app **Activity** log (Settings → Activity),
+and appended to a rotating log file. The file is `posterpilot.log` inside
+`LOG_DIR` (default `/data/logs` in Docker); when it grows past ~5 MB it rotates
+(`posterpilot.log` → `.1` → `.2` …), keeping about five files. Because the
+default lives under `/data`, the existing `/data` volume already persists it — no
+extra mount is required.
+
+The Activity log table is capped at `EVENT_RETENTION` rows (default `2000`);
+older rows are pruned automatically. You can wipe the table at any time with the
+**Clear activity** button on the Activity tab (this does not delete the on-disk
+log file). The English page documents these; translations can follow.
+
 ## Environment-variable reference
 
 Every setting below can be supplied as an environment variable. Most are also
@@ -144,6 +159,8 @@ and are locked in the UI.
 | `MEDIUX_CONCURRENCY`      | MediUX concurrency        | `5`                                   | Max concurrent MediUX requests.                                                               |
 | `HTTP_CACHE_TTL_DAYS`     | HTTP cache TTL            | `7`                                   | How long cached HTTP responses (scrapes) are reused, in days.                                 |
 | `LANGUAGE`                | Language                  | — (auto)                              | Preferred UI locale: `en`, `es`, `zh`, `ja`, or `pt-BR`.                                      |
+| `LOG_DIR`                 | —                         | `/data/logs` (Docker)                 | Folder for the rotating `posterpilot.log` file (~5 MB × 5 files).                             |
+| `EVENT_RETENTION`         | —                         | `2000`                                | Max number of activity-log rows kept in the database (older rows are pruned).                 |
 | `DATABASE_URL`            | —                         | `file:/data/posterpilot.db` (Docker)  | libsql file URL for the SQLite database.                                                      |
 | `PORT`                    | —                         | `3000`                                | Listen port.                                                                                  |
 
@@ -151,6 +168,7 @@ Boolean flags accept `1` / `true` / `on` / `yes` (case-insensitive) for _enabled
 anything else (or unset) leaves the documented default.
 
 :::note
-`DATABASE_URL` and `PORT` are deployment-level settings — they are read from the
-environment only and are not part of the in-app Settings page.
+`DATABASE_URL`, `PORT`, `LOG_DIR`, and `EVENT_RETENTION` are deployment-level
+settings — they are read from the environment only and are not part of the in-app
+Settings page.
 :::

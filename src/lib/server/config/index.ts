@@ -42,6 +42,10 @@ export interface AppConfig {
 	 * request's Accept-Language, then English.
 	 */
 	language: string | null;
+	/** Folder for the rotating log file; defaults under the existing /data volume. */
+	logDir: string;
+	/** Max number of activity-log rows kept; older rows are pruned past this cap. */
+	eventRetention: number;
 }
 
 /** Config keys that are secrets — never returned to the client, redacted in logs. */
@@ -76,7 +80,9 @@ const ENV_MAP: Record<ConfigKey, string> = {
 	providerFanart: 'PROVIDER_FANART',
 	providerThePosterDb: 'PROVIDER_THEPOSTERDB',
 	fanartKey: 'FANART_KEY',
-	language: 'LANGUAGE'
+	language: 'LANGUAGE',
+	logDir: 'LOG_DIR',
+	eventRetention: 'EVENT_RETENTION'
 };
 
 const DEFAULTS = {
@@ -91,7 +97,9 @@ const DEFAULTS = {
 	providerMediux: true,
 	providerTmdb: true,
 	providerFanart: false,
-	providerThePosterDb: false
+	providerThePosterDb: false,
+	logDir: './data/logs',
+	eventRetention: 2000
 	// `language` has no default: when unset the UI locale resolver falls through
 	// to the request's Accept-Language header, then English.
 };
@@ -203,7 +211,9 @@ export async function resolveConfig(): Promise<AppConfig> {
 		fanartKey: rawValue('fanartKey', persisted) ?? null,
 		// Validate against the supported locales; an absent/unsupported value is
 		// treated as unset (null) so resolution falls through to Accept-Language.
-		language: normalizeLocale(rawValue('language', persisted))
+		language: normalizeLocale(rawValue('language', persisted)),
+		logDir: rawValue('logDir', persisted) ?? DEFAULTS.logDir,
+		eventRetention: toInt(rawValue('eventRetention', persisted), DEFAULTS.eventRetention)
 	};
 }
 
@@ -346,6 +356,10 @@ export interface PublicConfig {
 	fanartKeySet: boolean;
 	/** Preferred UI locale (one of the supported locales) or null when unset. */
 	language: string | null;
+	/** Folder for the rotating log file (read-only; env/default). */
+	logDir: string;
+	/** Activity-log row cap used when pruning (read-only; env/default). */
+	eventRetention: number;
 	envManaged: Partial<Record<ConfigKey, boolean>>;
 }
 
@@ -374,6 +388,8 @@ export async function publicConfig(): Promise<PublicConfig> {
 		providerThePosterDb: c.providerThePosterDb,
 		fanartKeySet: c.fanartKey !== null,
 		language: c.language,
+		logDir: c.logDir,
+		eventRetention: c.eventRetention,
 		envManaged
 	};
 }
