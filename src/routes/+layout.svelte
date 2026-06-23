@@ -6,6 +6,27 @@
 	import { m } from '$lib/paraglide/messages';
 	import { setLocale } from '$lib/paraglide/runtime';
 	import { registerClientLocaleStrategy, seedClientLocale } from '$lib/i18n/strategy.client';
+	import WhatsNewModal from '$lib/components/WhatsNewModal.svelte';
+
+	// Local copy of the version comparison (the canonical `isNewerVersion` lives in
+	// `$lib/server/semver`, which SvelteKit forbids importing into client code).
+	// True when dotted version `a` is strictly newer than `b` (leading `v` ignored).
+	function isNewerVersion(a: string, b: string): boolean {
+		const parse = (s: string) =>
+			s
+				.trim()
+				.replace(/^v/i, '')
+				.split('.')
+				.map((n) => Number.parseInt(n, 10) || 0);
+		const pa = parse(a);
+		const pb = parse(b);
+		for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+			const x = pa[i] ?? 0;
+			const y = pb[i] ?? 0;
+			if (x !== y) return x > y;
+		}
+		return false;
+	}
 
 	// Cross-fade between pages using the View Transitions API where supported.
 	onNavigate((navigation) => {
@@ -36,15 +57,41 @@
 	}
 
 	// Best-effort update check (cached server-side; never blocks the page).
-	let update = $state<{ updateAvailable: boolean; latest: string | null; url: string } | null>(
-		null
-	);
+	type Update = {
+		updateAvailable: boolean;
+		latest: string | null;
+		url: string;
+		name: string | null;
+		body: string | null;
+	};
+	let update = $state<Update | null>(null);
+
+	// "What's new" modal, fed by the latest release notes from /api/update.
+	let whatsNewOpen = $state(false);
+
+	const LAST_SEEN_KEY = 'pp_lastSeenVersion';
+
 	onMount(async () => {
 		try {
 			const res = await fetch('/api/update');
 			if (res.ok) update = await res.json();
 		} catch {
 			// Ignore — the update check is optional.
+		}
+
+		// One-time-after-update: show the modal once when the running version is
+		// newer than the last version the user saw. On first ever run, seed the
+		// marker silently (no modal).
+		try {
+			const lastSeen = localStorage.getItem(LAST_SEEN_KEY);
+			if (lastSeen === null) {
+				localStorage.setItem(LAST_SEEN_KEY, data.version);
+			} else if (isNewerVersion(data.version, lastSeen)) {
+				whatsNewOpen = true;
+				localStorage.setItem(LAST_SEEN_KEY, data.version);
+			}
+		} catch {
+			// Ignore — localStorage may be unavailable (private mode, etc.).
 		}
 	});
 
@@ -111,6 +158,10 @@
 			class="border-b border-accent-900/50 bg-accent-950/40 px-4 py-2 text-center text-sm text-accent-200"
 		>
 			{m.update_available({ version: update.latest ?? '' })}
+			<button type="button" onclick={() => (whatsNewOpen = true)} class="font-semibold underline">
+				{m.update_whats_new()}
+			</button>
+			<span class="text-accent-500/60">·</span>
 			<a href={update.url} target="_blank" rel="noopener" class="font-semibold underline"
 				>{m.update_view()}</a
 			>
@@ -134,3 +185,11 @@
 		<p class="mx-auto mt-1 max-w-2xl text-neutral-700">{m.footer_disclaimer()}</p>
 	</footer>
 </div>
+
+<WhatsNewModal
+	bind:open={whatsNewOpen}
+	version={update?.latest ?? data.version}
+	name={update?.name ?? null}
+	body={update?.body ?? null}
+	url={update?.url ?? 'https://github.com/diegopeixoto/posterpilot/releases'}
+/>

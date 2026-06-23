@@ -16,6 +16,10 @@ export interface UpdateInfo {
 	latest: string | null;
 	updateAvailable: boolean;
 	url: string;
+	/** The latest release's display name (GitHub `name`), or null when unavailable. */
+	name: string | null;
+	/** The latest release's notes (GitHub `body`, Markdown), or null when unavailable. */
+	body: string | null;
 }
 
 /** Check GitHub for a newer release. Never throws — returns "no update" on failure. */
@@ -24,10 +28,17 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
 		current: version,
 		latest: null,
 		updateAvailable: false,
-		url: RELEASES_PAGE
+		url: RELEASES_PAGE,
+		name: null,
+		body: null
 	};
 	try {
-		const json = await fetchJson<{ tag_name?: string; html_url?: string }>(RELEASES_URL, {
+		const json = await fetchJson<{
+			tag_name?: string;
+			html_url?: string;
+			name?: string;
+			body?: string;
+		}>(RELEASES_URL, {
 			headers: { 'User-Agent': USER_AGENT, Accept: 'application/vnd.github+json' },
 			cacheTtlDays: 0.25, // ~6 hours
 			retries: 1,
@@ -38,7 +49,9 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
 			current: version,
 			latest,
 			updateAvailable: latest ? isNewerVersion(latest, version) : false,
-			url: json.html_url ?? RELEASES_PAGE
+			url: json.html_url ?? RELEASES_PAGE,
+			name: json.name?.trim() ? json.name : null,
+			body: json.body?.trim() ? json.body : null
 		};
 	} catch {
 		return base;

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { invalidateAll, goto } from '$app/navigation';
+	import { SvelteSet } from 'svelte/reactivity';
 	import { m } from '$lib/paraglide/messages';
 	import { setLocale } from '$lib/paraglide/runtime';
 	import PlexLogin from '$lib/components/PlexLogin.svelte';
@@ -11,9 +12,11 @@
 		{ title: m.setup_step_server, desc: m.setup_step_server_desc },
 		{ title: m.setup_step_tmdb, desc: m.setup_step_tmdb_desc },
 		{ title: m.setup_step_providers, desc: m.setup_step_providers_desc },
+		{ title: m.setup_step_libraries, desc: m.setup_step_libraries_desc },
 		{ title: m.setup_step_sync, desc: m.setup_step_sync_desc }
 	];
 	const total = steps.length;
+	const LIBRARIES_STEP = 4;
 	let step = $state(0);
 
 	// Step values, seeded from current config (so re-running the wizard is sane).
@@ -35,6 +38,57 @@
 	let providerFanart = $state(data.config.providerFanart);
 	let providerThePosterDb = $state(data.config.providerThePosterDb);
 	let fanartKey = $state('');
+
+	// ── Libraries step ─────────────────────────────────────────────────────────
+	// Cached library list (rendered instantly), refreshable live; mirrors the
+	// Settings "Libraries to sync" UX (select-all default, Refresh, error states).
+	type Section = { key: string; title: string; type: string };
+	let sections = $state<Section[]>(data.sections);
+	const selectedSections = new SvelteSet<string>(
+		data.config.includedSections.length
+			? data.config.includedSections
+			: data.sections.map((s) => s.key)
+	);
+	// All known libraries selected → persist [] (sync everything, incl. future ones).
+	const allSelected = $derived(
+		sections.length > 0 && sections.every((s) => selectedSections.has(s.key))
+	);
+	function toggleSection(key: string) {
+		if (selectedSections.has(key)) selectedSections.delete(key);
+		else selectedSections.add(key);
+	}
+
+	let refreshingLibs = $state(false);
+	let libsError = $state<string | null>(null);
+	// Connection signal for the Libraries step: a successful /api/plex/sections
+	// fetch (no error) means we reached the server. null = not yet checked.
+	let connectionOk = $state<boolean | null>(null);
+
+	async function refreshLibraries() {
+		refreshingLibs = true;
+		libsError = null;
+		try {
+			const res = await fetch('/api/plex/sections');
+			const body = (await res.json()) as { sections?: Section[]; error?: string };
+			if (Array.isArray(body.sections)) {
+				const wasAll = allSelected || selectedSections.size === 0;
+				sections = body.sections;
+				// Preserve "select all" semantics across a refreshed list so a
+				// newly-added library defaults to synced.
+				if (wasAll) {
+					selectedSections.clear();
+					for (const s of sections) selectedSections.add(s.key);
+				}
+			}
+			libsError = body.error ?? null;
+			connectionOk = !body.error;
+		} catch (e) {
+			libsError = e instanceof Error ? e.message : String(e);
+			connectionOk = false;
+		} finally {
+			refreshingLibs = false;
+		}
+	}
 
 	let busy = $state(false);
 	let testing = $state(false);
@@ -85,9 +139,18 @@
 				};
 				if (fanartKey) payload.fanartKey = fanartKey;
 				await postSettings(payload);
+			} else if (step === LIBRARIES_STEP) {
+				// All known libraries selected → [] (sync everything, incl. future ones).
+				await postSettings({
+					includedSections: allSelected ? [] : [...selectedSections]
+				});
 			}
 			await invalidateAll();
-			if (step < total - 1) step += 1;
+			if (step < total - 1) {
+				step += 1;
+				// Arriving at the Libraries step: fetch the server's libraries live.
+				if (step === LIBRARIES_STEP) refreshLibraries();
+			}
 		} finally {
 			busy = false;
 		}
@@ -309,6 +372,57 @@
 						: m.settings_fanart_key_placeholder_unset()}
 					class="input w-full"
 				/>
+			</div>
+		{:else if step === LIBRARIES_STEP}
+			<!-- Connection state -->
+			<div class="surface flex items-center gap-2 p-3 text-sm">
+				{#if refreshingLibs && connectionOk === null}
+					<span class="text-neutral-400">{m.setup_libraries_checking()}</span>
+				{:else if connectionOk === true}
+					<span class="text-emerald-400">{m.setup_libraries_connected()}</span>
+				{:else if connectionOk === false}
+					<span class="text-red-400">{m.setup_libraries_not_connected()}</span>
+				{:else}
+					<span class="text-neutral-500">{m.setup_libraries_check_hint()}</span>
+				{/if}
+			</div>
+
+			<!-- Library checklist (mirrors the Settings "Libraries to sync" UX) -->
+			<div>
+				<div class="mb-1 flex items-center gap-2">
+					<span class="text-sm font-medium">{m.settings_libraries_to_sync()}</span>
+					<button
+						type="button"
+						onclick={refreshLibraries}
+						disabled={refreshingLibs}
+						class="btn btn-ghost px-2 py-0.5 text-xs"
+					>
+						{refreshingLibs ? m.settings_libraries_refreshing() : m.settings_libraries_refresh()}
+					</button>
+				</div>
+				{#if libsError}
+					<p class="mb-2 text-xs text-amber-400">
+						{m.settings_libraries_refresh_failed({ error: libsError })}
+					</p>
+				{/if}
+				{#if sections.length === 0}
+					<p class="text-xs text-neutral-500">{m.settings_libraries_connect_first()}</p>
+				{:else}
+					<p class="mb-2 text-xs text-neutral-500">{m.settings_libraries_hint()}</p>
+					<div class="space-y-1">
+						{#each sections as section (section.key)}
+							<label class="flex items-center gap-2 text-sm text-neutral-300">
+								<input
+									type="checkbox"
+									checked={selectedSections.has(section.key)}
+									onchange={() => toggleSection(section.key)}
+								/>
+								{section.title}
+								<span class="text-xs text-neutral-500">({section.type})</span>
+							</label>
+						{/each}
+					</div>
+				{/if}
 			</div>
 		{:else}
 			<div class="space-y-3">
