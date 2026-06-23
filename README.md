@@ -1,17 +1,40 @@
-# posterpilot
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="artwork/texticon-posterpilot.png" />
+  <img alt="PosterPilot" src="artwork/primary-logo.png" width="460" />
+</picture>
+
+### Self-hosted artwork manager for Plex, Jellyfin &amp; Emby
+
+Find covers across **MediUX**, **Fanart.tv**, **TMDB** &amp; **ThePosterDB** and apply them
+to your media server or via Kometa/PMM — in a single Docker container.
 
 [![CI](https://github.com/diegopeixoto/posterpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/diegopeixoto/posterpilot/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/diegopeixoto/posterpilot?sort=semver)](https://github.com/diegopeixoto/posterpilot/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Container](https://img.shields.io/badge/ghcr.io-posterpilot-2496ED?logo=docker&logoColor=white)](https://github.com/diegopeixoto/posterpilot/pkgs/container/posterpilot)
-[![Documentation](https://img.shields.io/badge/docs-posterpilot-4F46E5?logo=astro&logoColor=white)](https://diegopeixoto.github.io/posterpilot)
+[![Docs](https://img.shields.io/badge/docs-posterpilot-4F46E5?logo=astro&logoColor=white)](https://diegopeixoto.github.io/posterpilot)
 [![Translation status](https://hosted.weblate.org/widget/posterpilot/svg-badge.svg)](https://hosted.weblate.org/engage/posterpilot/)
 
-Self-hosted web app to browse your **Plex, Jellyfin, or Emby** library, find
-artwork from **MediUX, Fanart.tv, TMDB, and ThePosterDB**, and apply the chosen
-cover to your media server — directly via its API and/or by exporting
-Kometa/PMM-compatible YAML. Image-forward, multi-language UI; runs as a single
-Docker container on a Mac and on an Unraid server.
+<br />
+
+**Media servers**
+
+[![Plex](https://img.shields.io/badge/Plex-282A2D?style=for-the-badge&logo=plex&logoColor=EBAF00)](https://www.plex.tv)
+[![Jellyfin](https://img.shields.io/badge/Jellyfin-00A4DC?style=for-the-badge&logo=jellyfin&logoColor=white)](https://jellyfin.org)
+[![Emby](https://img.shields.io/badge/Emby-52B54B?style=for-the-badge&logo=emby&logoColor=white)](https://emby.media)
+
+**Artwork providers**
+
+[![MediUX](https://img.shields.io/badge/MediUX-7C3AED?style=for-the-badge)](https://mediux.pro)
+[![Fanart.tv](https://img.shields.io/badge/Fanart.tv-FF8C00?style=for-the-badge)](https://fanart.tv)
+[![TMDB](https://img.shields.io/badge/TMDB-01B4E4?style=for-the-badge&logo=themoviedatabase&logoColor=white)](https://www.themoviedb.org)
+[![ThePosterDB](https://img.shields.io/badge/ThePosterDB-0EA5E9?style=for-the-badge)](https://theposterdb.com)
+
+🌐 Multi-language &nbsp;·&nbsp; 🖥️ Direct API &nbsp;·&nbsp; 📄 Kometa / PMM YAML &nbsp;·&nbsp; 🐳 Docker
+
+</div>
 
 > Spec-driven via [OpenSpec](https://github.com/Fission-AI/OpenSpec). See
 > `openspec/specs/` for the capability specs and `openspec/changes/` for in-flight
@@ -115,6 +138,18 @@ Two volumes matter:
   YAML lands where Kometa reads it.
 
 ### Unraid
+
+A Community Apps template is included at
+[`unraid/posterpilot.xml`](unraid/posterpilot.xml). On Unraid: **Docker → Add
+Container**, paste the template URL into _Template_:
+
+```
+https://raw.githubusercontent.com/diegopeixoto/posterpilot/main/unraid/posterpilot.xml
+```
+
+It pre-fills the GHCR image, the WebUI port, the `/data` and `/kometa` volumes,
+and the credential fields (all optional — you can configure them in the in-app
+Settings page instead, including Plex login).
 
 Point the Kometa volume at your existing Kometa config, e.g. in
 `docker-compose.yml`:

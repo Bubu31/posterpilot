@@ -85,9 +85,22 @@ pulling it:
 docker compose up -d --build
 ```
 
+## Unraid (Community Apps template)
+
+The repository ships a Community Apps template at `unraid/posterpilot.xml`. In the
+Unraid UI go to **Docker → Add Container** and paste this into the _Template_ field:
+
+```
+https://raw.githubusercontent.com/diegopeixoto/posterpilot/main/unraid/posterpilot.xml
+```
+
+It pre-fills the GHCR image, the WebUI port, the `/data` and `/kometa` volumes, and
+optional credential fields (Plex / Jellyfin / Emby, TMDB, Fanart.tv, language) —
+all of which you can also configure later in the Settings page.
+
 ## Docker Compose (Unraid)
 
-On Unraid, point the volumes at your `appdata` share — in particular, point the
+Prefer Compose? Point the volumes at your `appdata` share — in particular, point the
 Kometa volume at your **existing** Kometa config directory so exported YAML lands
 where Kometa already reads it:
 

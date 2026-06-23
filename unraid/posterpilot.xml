@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>posterpilot</Name>
+  <Repository>ghcr.io/diegopeixoto/posterpilot:latest</Repository>
+  <Registry>https://github.com/diegopeixoto/posterpilot/pkgs/container/posterpilot</Registry>
+  <Network>bridge</Network>
+  <MyIP/>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/diegopeixoto/posterpilot/issues</Support>
+  <Project>https://github.com/diegopeixoto/posterpilot</Project>
+  <Overview>PosterPilot is a self-hosted artwork manager for Plex, Jellyfin and Emby. Browse your library, find covers across MediUX, Fanart.tv, TMDB and ThePosterDB, and apply them directly to your media server and/or by exporting Kometa/PMM-compatible YAML. Credentials can be set here or in the in-app Settings page (including Plex login). Point the /kometa volume at your existing Kometa config to have exported YAML picked up on its next run.</Overview>
+  <Category>MediaApp:Video MediaServer:Video Tools:Utilities:</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/diegopeixoto/posterpilot/main/unraid/posterpilot.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/diegopeixoto/posterpilot/main/artwork/icon-posterpilot.png</Icon>
+  <ExtraParams/>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+  <Description>Self-hosted artwork manager for Plex, Jellyfin and Emby — find covers across MediUX, Fanart.tv, TMDB and ThePosterDB and apply them to your server or via Kometa/PMM YAML. Multi-language UI; configure here or in the Settings page.</Description>
+  <Config Name="WebUI Port" Target="3000" Default="3000" Mode="tcp" Description="HTTP port for the PosterPilot web UI." Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="App data (/data)" Target="/data" Default="/mnt/user/appdata/posterpilot" Mode="rw" Description="Persistent SQLite database, settings and history. Keep this on a mounted volume so state survives updates." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/posterpilot</Config>
+  <Config Name="Kometa assets (/kometa)" Target="/kometa" Default="/mnt/user/appdata/kometa/config" Mode="rw" Description="Optional. Mount your existing Kometa assets/config directory so exported YAML lands where Kometa reads it. Leave default if you do not use Kometa." Type="Path" Display="always" Required="false" Mask="false">/mnt/user/appdata/kometa/config</Config>
+  <Config Name="Server type" Target="SERVER_TYPE" Default="plex" Mode="" Description="Which media server to manage: plex, jellyfin, or emby. Default plex." Type="Variable" Display="always" Required="false" Mask="false">plex</Config>
+  <Config Name="TMDB key" Target="TMDB_KEY" Default="" Mode="" Description="TMDB v3 API key or v4 bearer/JWT (auto-detected). Required for metadata + TMDB artwork. Or set it in Settings." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Plex URL" Target="PLEX_URL" Default="" Mode="" Description="e.g. http://192.168.1.10:32400 — or use the in-app Plex login / connection discovery." Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Plex token" Target="PLEX_TOKEN" Default="" Mode="" Description="Your X-Plex-Token. Leave blank to acquire it via the in-app Plex login." Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="Jellyfin URL" Target="JELLYFIN_URL" Default="" Mode="" Description="Jellyfin base URL (when Server type = jellyfin)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Jellyfin API key" Target="JELLYFIN_API_KEY" Default="" Mode="" Description="Jellyfin API key (when Server type = jellyfin)." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Emby URL" Target="EMBY_URL" Default="" Mode="" Description="Emby base URL (when Server type = emby)." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Emby API key" Target="EMBY_API_KEY" Default="" Mode="" Description="Emby API key (when Server type = emby)." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Fanart.tv key" Target="FANART_KEY" Default="" Mode="" Description="Fanart.tv personal API key — enables the Fanart.tv artwork provider." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="UI language" Target="LANGUAGE" Default="en" Mode="" Description="UI locale: en (default), es, zh, ja, or pt-BR." Type="Variable" Display="advanced" Required="false" Mask="false">en</Config>
+  <Config Name="Port (internal)" Target="PORT" Default="3000" Mode="" Description="Internal listen port. Leave at 3000 unless you know what you are doing." Type="Variable" Display="advanced" Required="false" Mask="false">3000</Config>
+</Container>

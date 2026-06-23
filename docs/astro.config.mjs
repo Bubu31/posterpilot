@@ -14,6 +14,17 @@ export default defineConfig({
 			title: 'PosterPilot',
 			description:
 				'Self-hosted web app to browse a Plex/Jellyfin/Emby library, find artwork covers across multiple providers, and apply them to your media server and/or via Kometa YAML.',
+			logo: {
+				light: './src/assets/logo-light.png',
+				dark: './src/assets/logo-dark.png',
+				replacesTitle: true,
+				alt: 'PosterPilot'
+			},
+			favicon: '/favicon.svg',
+			head: [
+				{ tag: 'link', attrs: { rel: 'icon', href: '/favicon.ico', sizes: '32x32' } },
+				{ tag: 'link', attrs: { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' } }
+			],
 			social: [
 				{
 					icon: 'github',

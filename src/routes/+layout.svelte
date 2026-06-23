@@ -1,6 +1,5 @@
 <script lang="ts">
 	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
 	import { page } from '$app/state';
 	import { m } from '$lib/paraglide/messages';
 	import { setLocale } from '$lib/paraglide/runtime';
@@ -32,16 +31,11 @@
 	}
 </script>
 
-<svelte:head>
-	<link rel="icon" href={favicon} />
-</svelte:head>
-
 <div class="min-h-screen">
 	<header class="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
 		<div class="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4">
-			<a href="/" class="flex items-center gap-2 font-semibold tracking-tight">
-				<span class="text-accent-400">●</span>
-				{m.app_name()}
+			<a href="/" class="flex items-center" aria-label={m.app_name()}>
+				<img src="/logo.png" alt={m.app_name()} class="h-7 w-auto" />
 			</a>
 			<nav class="flex items-center gap-1 text-sm">
 				{#each links as link (link.href)}

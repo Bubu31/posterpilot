@@ -13,3 +13,5 @@ project.inlang
 src/lib/paraglide
 # Docs site is a separate workspace with its own formatting
 docs
+# Brand/design assets
+artwork
