@@ -3,6 +3,9 @@
 	import { onMount } from 'svelte';
 	import { onNavigate } from '$app/navigation';
 	import { page } from '$app/state';
+	import { m } from '$lib/paraglide/messages';
+	import { setLocale } from '$lib/paraglide/runtime';
+	import { registerClientLocaleStrategy, seedClientLocale } from '$lib/i18n/strategy.client';
 
 	// Cross-fade between pages using the View Transitions API where supported.
 	onNavigate((navigation) => {
@@ -14,9 +17,6 @@
 			});
 		});
 	});
-	import { m } from '$lib/paraglide/messages';
-	import { setLocale } from '$lib/paraglide/runtime';
-	import { registerClientLocaleStrategy, seedClientLocale } from '$lib/i18n/strategy.client';
 
 	let { children, data } = $props();
 
@@ -101,6 +101,8 @@
 			class="border-b border-amber-900/50 bg-amber-950/40 px-4 py-2 text-center text-sm text-amber-300"
 		>
 			{m.banner_configure()}
+			<a href="/setup" class="font-semibold underline">{m.settings_get_started()}</a>
+			<span class="text-amber-500/60">·</span>
 			<a href="/settings" class="font-semibold underline">{m.banner_settings_link()}</a>
 		</div>
 	{/if}

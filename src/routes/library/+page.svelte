@@ -70,6 +70,8 @@
 	}
 </script>
 
+<svelte:head><title>{m.library_title()} · PosterPilot</title></svelte:head>
+
 <div class="flex items-center justify-between">
 	<h1 class="text-2xl font-semibold tracking-tight">{m.library_title()}</h1>
 	<span class="text-sm text-neutral-500">{m.library_item_count({ count: data.items.length })}</span>

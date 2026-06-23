@@ -15,16 +15,28 @@ import {
 	type RawResource
 } from './plex-auth-parse';
 import type { ConnectionCandidate } from './types';
+import { version } from '$lib/version';
 
 const PLEX_TV = 'https://plex.tv/api/v2';
 const PRODUCT = 'PosterPilot';
+const DEVICE = 'PosterPilot';
 
-/** Headers every plex.tv call carries (product + stable client identifier). */
+/**
+ * Headers every plex.tv call carries. Beyond the product + stable client
+ * identifier, plex.tv uses the device/platform/version fields to register the
+ * acquired token as a recognizable device entry in the user's account
+ * (https://developer.plex.tv). The client identifier must stay stable per
+ * install so plex.tv treats every call as the same client.
+ */
 function plexTvHeaders(clientId: string): Record<string, string> {
 	return {
 		Accept: 'application/json',
 		'X-Plex-Product': PRODUCT,
-		'X-Plex-Client-Identifier': clientId
+		'X-Plex-Version': version,
+		'X-Plex-Client-Identifier': clientId,
+		'X-Plex-Device': DEVICE,
+		'X-Plex-Device-Name': DEVICE,
+		'X-Plex-Platform': 'Web'
 	};
 }
 

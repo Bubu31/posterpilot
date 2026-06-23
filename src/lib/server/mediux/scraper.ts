@@ -8,14 +8,11 @@
  */
 
 import { fetchText } from '$lib/server/http';
+import { BROWSER_USER_AGENT } from '$lib/server/ua';
 import type { MediuxSet, TmdbMediaType } from '$lib/server/types';
 import { parseListingSets } from './parser';
 
 const BASE_URL = 'https://mediux.pro';
-
-// Realistic UA — mediux.pro is behind bot filtering.
-const USER_AGENT =
-	'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
 /** Options for a discovery run. delayMs/concurrency are accepted for API stability but unused (single request). */
 export interface DiscoverOptions {
@@ -42,7 +39,7 @@ export async function discoverCandidates(
 	opts: DiscoverOptions
 ): Promise<MediuxSet[]> {
 	const html = await fetchText(listingUrl(tmdbId, mediaType), {
-		headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+		headers: { 'User-Agent': BROWSER_USER_AGENT, Accept: 'text/html' },
 		cacheTtlDays: opts.cacheTtlDays,
 		forceRefresh: opts.forceRefresh,
 		retries: 2

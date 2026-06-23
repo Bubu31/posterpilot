@@ -1,4 +1,5 @@
 import { fetchJson } from '$lib/server/http';
+import { USER_AGENT } from '$lib/server/ua';
 import type { AppConfig } from '$lib/server/config';
 import type { MediaItem } from '$lib/server/db/schema';
 import type { PosterProvider } from './types';
@@ -25,6 +26,7 @@ export const fanartProvider: PosterProvider = {
 		const url = `${FANART_BASE}/${path}/${id}?api_key=${config.fanartKey}`;
 		try {
 			const json = await fetchJson<unknown>(url, {
+				headers: { 'User-Agent': USER_AGENT },
 				cacheTtlDays: config.httpCacheTtlDays,
 				forceRefresh: opts?.forceRefresh
 			});

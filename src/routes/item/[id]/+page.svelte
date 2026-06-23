@@ -194,6 +194,8 @@
 	}
 </script>
 
+<svelte:head><title>{data.item.title} · PosterPilot</title></svelte:head>
+
 {#snippet posterTile(c: PosterCandidate)}
 	<button
 		type="button"

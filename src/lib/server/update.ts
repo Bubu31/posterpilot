@@ -1,5 +1,6 @@
 import { fetchJson } from '$lib/server/http';
 import { version } from '$lib/version';
+import { USER_AGENT } from './ua';
 import { isNewerVersion } from './semver';
 
 /**
@@ -27,7 +28,7 @@ export async function checkForUpdate(): Promise<UpdateInfo> {
 	};
 	try {
 		const json = await fetchJson<{ tag_name?: string; html_url?: string }>(RELEASES_URL, {
-			headers: { 'User-Agent': 'posterpilot', Accept: 'application/vnd.github+json' },
+			headers: { 'User-Agent': USER_AGENT, Accept: 'application/vnd.github+json' },
 			cacheTtlDays: 0.25, // ~6 hours
 			retries: 1,
 			timeoutMs: 6000

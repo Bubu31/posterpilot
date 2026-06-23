@@ -1,4 +1,5 @@
 import { fetchText } from '$lib/server/http';
+import { BROWSER_USER_AGENT } from '$lib/server/ua';
 import type { AppConfig } from '$lib/server/config';
 import type { MediaItem } from '$lib/server/db/schema';
 import type { PosterProvider } from './types';
@@ -14,8 +15,6 @@ import { parseThePosterDb } from './parse';
  */
 
 const BASE_URL = 'https://theposterdb.com';
-const USER_AGENT =
-	'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
 
 export const thePosterDbProvider: PosterProvider = {
 	id: 'theposterdb',
@@ -28,7 +27,7 @@ export const thePosterDbProvider: PosterProvider = {
 		const url = `${BASE_URL}/search?term=${term}&section=${section}`;
 		try {
 			const html = await fetchText(url, {
-				headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' },
+				headers: { 'User-Agent': BROWSER_USER_AGENT, Accept: 'text/html' },
 				cacheTtlDays: config.httpCacheTtlDays,
 				forceRefresh: opts?.forceRefresh,
 				retries: 1

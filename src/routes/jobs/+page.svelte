@@ -16,6 +16,8 @@
 	}
 </script>
 
+<svelte:head><title>{m.jobs_title()} · PosterPilot</title></svelte:head>
+
 <h1 class="text-2xl font-semibold tracking-tight">{m.jobs_title()}</h1>
 
 {#if active.length}
