@@ -1,8 +1,11 @@
 # configuration Specification
 
 ## Purpose
+
 TBD - created by archiving change add-poster-manager. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Provide and persist runtime configuration
 
 The system SHALL accept runtime configuration — Plex base URL, Plex token, TMDB credential, Kometa assets directory, and default apply method — from environment variables and from the settings UI, and SHALL persist UI-entered values so they survive restarts.
@@ -49,4 +52,3 @@ The system SHALL treat the Plex token and TMDB credential as secrets: never logg
 
 - **WHEN** the system logs requests or errors involving Plex or TMDB
 - **THEN** the secret values are redacted from all log output
-

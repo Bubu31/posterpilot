@@ -2,7 +2,7 @@
 
 The legacy `mediux-scraper-monorepo` is a Python tool (a complete 1420-line `main.py` plus an unfinished package/app refactor) that resolves titles to TMDB IDs, scrapes mediux.pro for artwork sets, and emits Kometa YAML inside a consolidated JSON dump. It is CLI-only and file-driven; there is no UI and no direct-to-Plex application.
 
-This change starts a **new repository** that keeps the proven scraping *behavior* as a reference but rebuilds the tool as a self-hosted web app. The user runs it on a Mac (development/daily use) and on an Unraid server (where Plex and Kometa already run). The headline requirement is a modern UI for browsing a Plex library and comparing/applying MediaUX covers.
+This change starts a **new repository** that keeps the proven scraping _behavior_ as a reference but rebuilds the tool as a self-hosted web app. The user runs it on a Mac (development/daily use) and on an Unraid server (where Plex and Kometa already run). The headline requirement is a modern UI for browsing a Plex library and comparing/applying MediaUX covers.
 
 Stack was chosen deliberately: the workload is I/O-bound (HTTP to Plex/TMDB/MediaUX) and the centerpiece is an image-heavy interactive UI, which is the JavaScript/TypeScript ecosystem's strength. A single language end-to-end yields one container and one mental model, and the user's `fallow` code-intelligence tool only analyzes TS/JS.
 

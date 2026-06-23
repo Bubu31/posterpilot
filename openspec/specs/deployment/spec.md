@@ -1,8 +1,11 @@
 # deployment Specification
 
 ## Purpose
+
 TBD - created by archiving change add-poster-manager. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Single-container deployment
 
 The system SHALL build into a single Docker image that runs the full application (web UI, API, and background worker) in one container, runnable identically on macOS and on an Unraid server.
@@ -43,4 +46,3 @@ The system SHALL accept credentials and paths via environment variables, and SHA
 
 - **WHEN** the user fills the documented environment in the compose file and starts it
 - **THEN** the service comes up with both volumes mounted and is reachable on the published port
-

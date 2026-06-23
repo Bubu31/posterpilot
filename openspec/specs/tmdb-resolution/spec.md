@@ -1,8 +1,11 @@
 # tmdb-resolution Specification
 
 ## Purpose
+
 TBD - created by archiving change add-poster-manager. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Resolve external GUID to a TMDB ID
 
 The system SHALL resolve a Plex/external identifier (tmdb, imdb, or tvdb) to a canonical TMDB ID and media type (movie or show). When multiple GUIDs are present, the system SHALL prefer a direct TMDB GUID, then imdb, then tvdb.
@@ -49,4 +52,3 @@ The system SHALL authenticate to TMDB using either a v4 bearer token (JWT) via t
 
 - **WHEN** the configured TMDB credential is a v3 API key
 - **THEN** the system sends it as an `api_key` query parameter
-

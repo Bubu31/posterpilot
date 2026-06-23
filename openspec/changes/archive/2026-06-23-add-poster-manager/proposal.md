@@ -1,6 +1,6 @@
 ## Why
 
-Replacing Plex artwork today means running the legacy `mediux-scraper` Python CLI by hand, hand-editing a `movies.txt`, and either pasting YAML into Kometa or fiddling with files on the server. There is no way to *see* a library, *compare* candidate covers from [mediux.pro](https://mediux.pro), and apply a choice in one place. This change introduces a self-hosted web app that lists a Plex library, finds MediaUX covers per title, and applies the chosen cover — both directly through the Plex API and by exporting Kometa-compatible YAML — from a single dockerized service that runs on both a Mac and an Unraid server.
+Replacing Plex artwork today means running the legacy `mediux-scraper` Python CLI by hand, hand-editing a `movies.txt`, and either pasting YAML into Kometa or fiddling with files on the server. There is no way to _see_ a library, _compare_ candidate covers from [mediux.pro](https://mediux.pro), and apply a choice in one place. This change introduces a self-hosted web app that lists a Plex library, finds MediaUX covers per title, and applies the chosen cover — both directly through the Plex API and by exporting Kometa-compatible YAML — from a single dockerized service that runs on both a Mac and an Unraid server.
 
 ## What Changes
 

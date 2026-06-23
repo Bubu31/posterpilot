@@ -1,8 +1,11 @@
 # plex-integration Specification
 
 ## Purpose
+
 TBD - created by archiving change add-poster-manager. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Connect to a Plex server
 
 The system SHALL connect to a Plex Media Server using a base URL and an `X-Plex-Token`, and SHALL verify connectivity before performing library operations.
@@ -53,4 +56,3 @@ The system SHALL set an item's poster by supplying an image URL to the Plex `pos
 
 - **WHEN** the Plex server returns an error while setting the poster (e.g., the image URL is unreachable from Plex)
 - **THEN** the system reports the failure with the Plex status and does not lock the field
-

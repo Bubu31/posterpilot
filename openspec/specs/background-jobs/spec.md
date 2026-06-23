@@ -1,8 +1,11 @@
 # background-jobs Specification
 
 ## Purpose
+
 TBD - created by archiving change add-poster-manager. Update Purpose after archive.
+
 ## Requirements
+
 ### Requirement: Run library-wide operations as background jobs
 
 The system SHALL execute long-running operations (library sync, bulk cover discovery, bulk apply) as background jobs processed by an in-process worker queue, so the UI remains responsive and operations survive page navigation.
@@ -53,4 +56,3 @@ The system SHALL persist each job's type, status, progress, error (if any), and 
 
 - **WHEN** the service restarts while a job was still running
 - **THEN** that job is marked interrupted/failed rather than left perpetually "running"
-
