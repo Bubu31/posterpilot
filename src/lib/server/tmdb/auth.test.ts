@@ -30,9 +30,10 @@ describe('tmdbAuth', () => {
 
 describe('pickExternalId', () => {
 	it('prefers tmdb over imdb and tvdb', () => {
-		expect(
-			pickExternalId({ tmdb: '603', imdb: 'tt0133093', tvdb: '12345' })
-		).toEqual({ id: '603', source: 'tmdb' });
+		expect(pickExternalId({ tmdb: '603', imdb: 'tt0133093', tvdb: '12345' })).toEqual({
+			id: '603',
+			source: 'tmdb'
+		});
 	});
 
 	it('falls back to imdb when tmdb is absent', () => {
@@ -70,9 +71,10 @@ describe('parseFindResult', () => {
 	});
 
 	it('prefers a movie match over a concurrent tv match', () => {
-		expect(
-			parseFindResult({ movie_results: [{ id: 603 }], tv_results: [{ id: 1399 }] })
-		).toEqual({ tmdbId: '603', mediaType: 'movie' });
+		expect(parseFindResult({ movie_results: [{ id: 603 }], tv_results: [{ id: 1399 }] })).toEqual({
+			tmdbId: '603',
+			mediaType: 'movie'
+		});
 	});
 
 	it('returns null when there are no results', () => {

@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
-import {
-	buildMetadataObject,
-	mergeMetadata,
-	toYaml,
-	type KometaItemInput
-} from './yaml';
+import { buildMetadataObject, mergeMetadata, toYaml, type KometaItemInput } from './yaml';
 
 describe('buildMetadataObject', () => {
 	it('encodes poster-only items under metadata keyed by tmdb id', () => {

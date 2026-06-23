@@ -56,9 +56,9 @@ describe('parseGuids', () => {
 
 describe('buildPosterUrl', () => {
 	it('builds an absolute, token-bearing URL from a relative thumb', () => {
-		expect(buildPosterUrl('http://plex.local:32400', '/library/metadata/42/thumb/168', 'abc123')).toBe(
-			'http://plex.local:32400/library/metadata/42/thumb/168?X-Plex-Token=abc123'
-		);
+		expect(
+			buildPosterUrl('http://plex.local:32400', '/library/metadata/42/thumb/168', 'abc123')
+		).toBe('http://plex.local:32400/library/metadata/42/thumb/168?X-Plex-Token=abc123');
 	});
 
 	it('strips a trailing slash from the base url', () => {

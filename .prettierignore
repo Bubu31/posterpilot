@@ -4,3 +4,12 @@ build
 data
 drizzle
 bun.lock
+# Vendored Claude Code plugin files (not project source)
+.claude
+# OpenSpec docs are managed by the openspec CLI
+openspec
+# inlang/Paraglide tooling config + generated output
+project.inlang
+src/lib/paraglide
+# Docs site is a separate workspace with its own formatting
+docs
