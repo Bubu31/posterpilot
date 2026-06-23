@@ -1,16 +1,16 @@
 ## 1. Project scaffold
 
-- [ ] 1.1 Initialize a SvelteKit + TypeScript project on Bun with the Bun adapter
+- [x] 1.1 Initialize a SvelteKit + TypeScript project on Bun (adapter-node, run under Bun)
 - [ ] 1.2 Add Tailwind CSS and a Svelte component library (bits-ui / shadcn-svelte) with a dark, image-forward base theme
 - [ ] 1.3 Configure linting/formatting and add `fallow` (`npx fallow health` / `dead-code`) as a dev/CI check
 - [ ] 1.4 Set up project structure: `src/lib/server/{plex,tmdb,mediux,posters,jobs,db,config}` and route folders
-- [ ] 1.5 Add a `.env.example` documenting `PLEX_URL`, `PLEX_TOKEN`, `TMDB_KEY`, `KOMETA_ASSETS_DIR`, `DATA_DIR`, `PORT`
+- [x] 1.5 Add a `.env.example` documenting `PLEX_URL`, `PLEX_TOKEN`, `TMDB_KEY`, `KOMETA_ASSETS_DIR`, `DATABASE_URL`, `PORT`, scraping knobs
 
 ## 2. Persistence (SQLite + Drizzle)
 
-- [ ] 2.1 Define Drizzle schema: `media_items`, `poster_candidates`, `applied_posters`, `jobs`, `http_cache`, `settings`
-- [ ] 2.2 Wire the Bun SQLite driver and Drizzle, with the DB file under the configured data dir
-- [ ] 2.3 Generate and apply initial migrations; create the DB on first run
+- [x] 2.1 Define Drizzle schema: `media_items`, `poster_candidates`, `applied_posters`, `jobs`, `http_cache`, `settings`
+- [x] 2.2 Wire the libsql driver and Drizzle, with the DB file under the configured data dir
+- [x] 2.3 Generate and apply initial migrations; create the DB on first run (migrations run on startup via hooks.server.ts)
 
 ## 3. Configuration
 

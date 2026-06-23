@@ -1,24 +1,33 @@
-# dependencies
-node_modules/
+node_modules
 
-# build output
-/build/
-/.svelte-kit/
-/dist/
+# Output
+.output
+.vercel
+.netlify
+.wrangler
+/.svelte-kit
+/build
 
-# env / secrets
+# OS
+.DS_Store
+Thumbs.db
+
+# Env
 .env
 .env.*
 !.env.example
-*.local
+!.env.test
 
-# runtime data
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Runtime data (SQLite db + Kometa exports)
 /data/
 *.sqlite
 *.sqlite-*
 *.db
 
-# editor / OS
+# Editor
 .obsidian/
-.DS_Store
 .vscode/
