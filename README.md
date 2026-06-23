@@ -7,9 +7,10 @@
 [![Documentation](https://img.shields.io/badge/docs-posterpilot-4F46E5?logo=astro&logoColor=white)](https://diegopeixoto.github.io/posterpilot)
 [![Translation status](https://hosted.weblate.org/widget/posterpilot/svg-badge.svg)](https://hosted.weblate.org/engage/posterpilot/)
 
-Self-hosted web app to browse a Plex library, find artwork covers on
-[mediux.pro](https://mediux.pro), and apply the chosen cover to Plex — directly
-via the Plex API and/or by exporting Kometa/PMM-compatible YAML. Runs as a single
+Self-hosted web app to browse your **Plex, Jellyfin, or Emby** library, find
+artwork from **MediUX, Fanart.tv, TMDB, and ThePosterDB**, and apply the chosen
+cover to your media server — directly via its API and/or by exporting
+Kometa/PMM-compatible YAML. Image-forward, multi-language UI; runs as a single
 Docker container on a Mac and on an Unraid server.
 
 > Spec-driven via [OpenSpec](https://github.com/Fission-AI/OpenSpec). See
@@ -22,14 +23,20 @@ translating guides live at
 
 ## What it does
 
-1. **Sync** your Plex movie/show libraries and resolve each title to a TMDB id.
-2. **Find covers** for a title on mediux.pro (poster/background candidates).
+1. **Sync** your Plex / Jellyfin / Emby movie & show libraries, resolving each
+   title to a TMDB id with rich metadata (backdrop, logo, rating, genres, cast).
+2. **Find covers** across the enabled providers (MediUX, Fanart.tv, TMDB,
+   ThePosterDB), grouped into artwork **sets** — pick a whole set or assemble a
+   custom poster + backdrop set.
 3. **Apply** a chosen cover, two ways (selectable):
-   - **Plex API** — uploads the poster and locks the field, instantly.
+   - **Media server API** — uploads the poster (and backdrop) and, on Plex, locks
+     the field so agents won't overwrite it.
    - **Kometa export** — writes `url_poster`/`url_background` YAML into a mounted
      directory your existing Kometa instance consumes on its next run.
 
-Library-wide work runs as background jobs with live progress (SSE).
+A metadata-rich item page, library filtering/sorting (rating, genre, recency),
+and a UI localized into five languages round it out. Library-wide work runs as
+background jobs with live progress (SSE).
 
 ## Stack
 
@@ -82,16 +89,23 @@ Or build locally instead:
 docker compose up -d --build
 ```
 
-Configuration is via environment variables (or the in-app **Settings** page):
+Configuration is via environment variables (or the in-app **Settings** page).
+Core variables — see the [Configuration docs](https://diegopeixoto.github.io/posterpilot/configuration/)
+for the complete reference:
 
-| var                 | meaning                                                         |
-| ------------------- | --------------------------------------------------------------- |
-| `PLEX_URL`          | e.g. `http://192.168.1.10:32400`                                |
-| `PLEX_TOKEN`        | your `X-Plex-Token`                                             |
-| `TMDB_KEY`          | TMDB v3 API key **or** v4 bearer/JWT (auto-detected)            |
-| `DATABASE_URL`      | libsql file URL (default `file:/data/posterpilot.db` in Docker) |
-| `KOMETA_ASSETS_DIR` | where exported Kometa YAML is written (default `/kometa`)       |
-| `PORT`              | listen port (default `3000`)                                    |
+| var                                                      | meaning                                                         |
+| -------------------------------------------------------- | --------------------------------------------------------------- |
+| `SERVER_TYPE`                                            | `plex` (default), `jellyfin`, or `emby`                         |
+| `PLEX_URL` / `PLEX_TOKEN`                                | Plex base URL and `X-Plex-Token` (or acquire via in-app login)  |
+| `JELLYFIN_URL` / `JELLYFIN_API_KEY`                      | Jellyfin server URL and API key                                 |
+| `EMBY_URL` / `EMBY_API_KEY`                              | Emby server URL and API key                                     |
+| `TMDB_KEY`                                               | TMDB v3 API key **or** v4 bearer/JWT (auto-detected)            |
+| `FANART_KEY`                                             | Fanart.tv API key (enables the Fanart.tv provider)              |
+| `PROVIDER_MEDIUX` / `_TMDB` / `_FANART` / `_THEPOSTERDB` | per-provider on/off toggles                                     |
+| `LANGUAGE`                                               | UI locale: `en` (default), `es`, `zh`, `ja`, `pt-BR`            |
+| `DATABASE_URL`                                           | libsql file URL (default `file:/data/posterpilot.db` in Docker) |
+| `KOMETA_ASSETS_DIR`                                      | where exported Kometa YAML is written (default `/kometa`)       |
+| `PORT`                                                   | listen port (default `3000`)                                    |
 
 Two volumes matter:
 
@@ -111,9 +125,9 @@ volumes:
   - /mnt/user/appdata/kometa/config:/kometa
 ```
 
-Set `PLEX_URL`/`PLEX_TOKEN`/`TMDB_KEY` in the container's environment (or leave
-them blank and configure via the Settings page), then browse to the container on
-port 3000.
+Set your media-server and `TMDB_KEY` credentials in the container's environment
+(or leave them blank and configure via the Settings page — including Plex login),
+then browse to the container on port 3000.
 
 ## How Kometa consumes the export
 
