@@ -14,6 +14,9 @@ export const mediaItems = sqliteTable('media_items', {
 	/** Media type as classified against TMDB (movie/tv); null until resolved. */
 	mediaType: text('media_type', { enum: ['movie', 'tv'] }),
 	currentPosterUrl: text('current_poster_url'),
+	/** User's pending cover selection (applied on the next apply action). */
+	selectedPosterUrl: text('selected_poster_url'),
+	selectedBackgroundUrl: text('selected_background_url'),
 	hasMediux: integer('has_mediux', { mode: 'boolean' }),
 	resolved: integer('resolved', { mode: 'boolean' }).notNull().default(false),
 	updatedAt: integer('updated_at', { mode: 'timestamp' })

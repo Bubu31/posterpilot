@@ -41,18 +41,18 @@
 
 ## 7. Poster application
 
-- [ ] 7.1 Implement candidate selection: manual selection and automatic "newest set primary poster" selection
-- [ ] 7.2 Implement direct apply (delegate to Plex `uploadPosterFromUrl`) recording method "plex"
-- [ ] 7.3 Implement Kometa YAML export (`url_poster`/`url_background`) to the mounted assets dir, updating existing entries in place, recording method "kometa"
-- [ ] 7.4 Implement combined apply (both methods) recording each outcome independently
+- [x] 7.1 Implement candidate selection: manual selection and automatic "newest set primary poster" selection
+- [x] 7.2 Implement direct apply (delegate to Plex `uploadPosterFromUrl`) recording method "plex"
+- [x] 7.3 Implement Kometa YAML export (`url_poster`/`url_background`) to the mounted assets dir, updating existing entries in place, recording method "kometa"
+- [x] 7.4 Implement combined apply (both methods) recording each outcome independently
 - [ ] 7.5 Record applied posters in history; tests for each method and partial-failure visibility
 
 ## 8. Background jobs
 
-- [ ] 8.1 Implement an in-process job queue + async worker with bounded concurrency
-- [ ] 8.2 Implement job types: library sync, bulk discovery, bulk apply
+- [x] 8.1 Implement an in-process job queue + async worker with bounded concurrency
+- [x] 8.2 Implement job types: library sync, bulk discovery, bulk apply
 - [ ] 8.3 Implement SSE progress streaming (processed/total, current item, status), including snapshot-on-subscribe for in-progress jobs
-- [ ] 8.4 Implement job cancellation and persist job history; mark interrupted jobs failed on startup
+- [x] 8.4 Implement job cancellation and persist job history; mark interrupted jobs failed on startup
 - [ ] 8.5 Tests for progress reporting, cancellation, and restart handling
 
 ## 9. Web UI
