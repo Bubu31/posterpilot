@@ -1,8 +1,13 @@
 import { eq, inArray, notInArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { mediaItems } from '$lib/server/db/schema';
-import { resolveConfig, requireConfig, type ApplyMethod } from '$lib/server/config';
-import { listSections, listItems } from '$lib/server/plex/client';
+import {
+	resolveConfig,
+	requireConfig,
+	requireActiveServer,
+	type ApplyMethod
+} from '$lib/server/config';
+import { resolveActiveServer, serverTypeLabel } from '$lib/server/media-server';
 import { fetchMetadata, resolveTmdb } from '$lib/server/tmdb/client';
 import { applyToItem, autoSelectPoster, discoverForItem } from '$lib/server/posters/service';
 import type { JobContext } from './runner';
@@ -14,28 +19,30 @@ export type JobPayload =
 	| { kind: 'discover'; itemIds?: number[]; forceRefresh?: boolean }
 	| { kind: 'apply'; itemIds: number[]; method: ApplyMethod; selection: 'auto' | 'stored' };
 
-/** Sync: pull Plex sections/items, upsert media_items, resolve TMDB ids. */
+/** Sync: pull the active server's libraries/items, upsert media_items, resolve TMDB ids. */
 export async function runSyncJob(ctx: JobContext): Promise<void> {
 	const config = await resolveConfig();
-	requireConfig(config, ['plexUrl', 'plexToken', 'tmdbKey']);
-	const plexUrl = config.plexUrl!;
-	const plexToken = config.plexToken!;
+	requireActiveServer(config);
+	requireConfig(config, ['tmdbKey']);
+	const { server } = resolveActiveServer(config);
+	if (!server) throw new Error(`${serverTypeLabel(config.serverType)} is not configured`);
 
-	const allSections = await listSections(plexUrl, plexToken);
+	const allSections = await server.listLibraries();
 	const sections = config.includedSections.length
 		? allSections.filter((s) => config.includedSections.includes(s.key))
 		: allSections;
 
 	// Prune items from libraries no longer synced (excluded in settings, or removed
-	// from Plex). Cascades to their candidates/history. Keeps the count accurate.
+	// from the server). Cascades to their candidates/history. Keeps the count accurate.
 	const keepKeys = sections.map((s) => s.key);
 	if (keepKeys.length) {
 		await db.delete(mediaItems).where(notInArray(mediaItems.sectionKey, keepKeys));
 	}
 
-	const work: { sectionKey: string; item: Awaited<ReturnType<typeof listItems>>[number] }[] = [];
+	type SyncItem = Awaited<ReturnType<typeof server.listItems>>[number];
+	const work: { sectionKey: string; item: SyncItem }[] = [];
 	for (const section of sections) {
-		const items = await listItems(plexUrl, plexToken, section.key);
+		const items = await server.listItems(section.key);
 		for (const item of items) work.push({ sectionKey: section.key, item });
 	}
 
@@ -46,7 +53,7 @@ export async function runSyncJob(ctx: JobContext): Promise<void> {
 		await ctx.progress(processed, item.title);
 
 		const base = {
-			ratingKey: item.ratingKey,
+			ratingKey: item.id,
 			sectionKey,
 			type: item.type,
 			title: item.title,
@@ -59,7 +66,7 @@ export async function runSyncJob(ctx: JobContext): Promise<void> {
 		};
 
 		const existing = (
-			await db.select().from(mediaItems).where(eq(mediaItems.ratingKey, item.ratingKey)).limit(1)
+			await db.select().from(mediaItems).where(eq(mediaItems.ratingKey, item.id)).limit(1)
 		)[0];
 		let itemId: number;
 		if (existing) {

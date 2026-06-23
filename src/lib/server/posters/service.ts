@@ -6,8 +6,8 @@ import {
 	posterCandidates,
 	type MediaItem
 } from '$lib/server/db/schema';
-import { requireConfig, type AppConfig, type ApplyMethod } from '$lib/server/config';
-import { setPosterLock, uploadPosterBytes, uploadPosterFromUrl } from '$lib/server/plex/client';
+import type { AppConfig, ApplyMethod } from '$lib/server/config';
+import { resolveActiveServer, serverTypeLabel } from '$lib/server/media-server';
 import { writeKometaYaml } from '$lib/server/kometa/yaml';
 import { availableProviders, PROVIDER_ORDER, type ProviderId } from './providers';
 
@@ -121,14 +121,19 @@ export async function applyToItem(
 ): Promise<ApplyOutcome[]> {
 	const { posterUrl, backgroundUrl, method, config } = params;
 	const outcomes: ApplyOutcome[] = [];
-	const doPlex = method === 'plex' || method === 'both';
+	const doServer = method === 'plex' || method === 'both';
 	const doKometa = method === 'kometa' || method === 'both';
 
-	if (doPlex) {
+	if (doServer) {
+		// Persisted as 'plex' (the direct-server method) for schema compatibility,
+		// but routed through whichever provider is active.
 		let outcome: ApplyOutcome = { method: 'plex', status: 'success' };
 		try {
-			requireConfig(config, ['plexUrl', 'plexToken']);
-			await uploadPosterFromUrl(config.plexUrl!, config.plexToken!, item.ratingKey, posterUrl);
+			const server = requireActiveServerOrThrow(config);
+			await server.applyPosterUrl(item.ratingKey, posterUrl);
+			if (backgroundUrl && server.applyBackgroundUrl) {
+				await server.applyBackgroundUrl(item.ratingKey, backgroundUrl);
+			}
 		} catch (e) {
 			outcome = { method: 'plex', status: 'failed', error: errorMessage(e) };
 		}
@@ -169,10 +174,22 @@ function errorMessage(e: unknown): string {
 	return e instanceof Error ? e.message : String(e);
 }
 
+/** Resolve the active media-server provider, or throw a clear missing-config error. */
+function requireActiveServerOrThrow(config: AppConfig) {
+	const { server, missing } = resolveActiveServer(config);
+	if (!server) {
+		throw new Error(
+			`${serverTypeLabel(config.serverType)} is not configured (missing: ${missing.join(', ')})`
+		);
+	}
+	return server;
+}
+
 /**
- * Apply a user-supplied image file as the item's poster, directly to Plex (no
- * hosting). Records the application. For a custom URL (which both Plex and Kometa
- * can consume) use the normal apply flow with the URL as the poster instead.
+ * Apply a user-supplied image file as the item's poster, directly to the active
+ * media server (no hosting). Records the application. For a custom URL (which both
+ * the server and Kometa can consume) use the normal apply flow with the URL as the
+ * poster instead.
  */
 export async function applyCustomUpload(
 	item: MediaItem,
@@ -180,8 +197,8 @@ export async function applyCustomUpload(
 	contentType: string,
 	config: AppConfig
 ): Promise<void> {
-	requireConfig(config, ['plexUrl', 'plexToken']);
-	await uploadPosterBytes(config.plexUrl!, config.plexToken!, item.ratingKey, data, contentType);
+	const server = requireActiveServerOrThrow(config);
+	await server.applyPosterBytes(item.ratingKey, data, contentType);
 	await db.insert(appliedPosters).values({
 		mediaItemId: item.id,
 		url: 'custom-upload',
@@ -191,23 +208,19 @@ export async function applyCustomUpload(
 }
 
 /**
- * Revert an item to its original Plex poster: re-set the poster captured at sync,
- * unlock the field so Plex manages it again, and clear posterpilot's applied
+ * Revert an item to its original poster: re-set the poster captured at sync,
+ * unlock the field so the server manages it again, and clear posterpilot's applied
  * history + pending selection so the item reads as unchanged. The Kometa YAML
  * export (if any) is left in place — remove it from your Kometa config to fully
- * undo a Kometa apply.
+ * undo a Kometa apply. On servers without a lock concept (Jellyfin/Emby) the
+ * unlock step is a no-op.
  */
 export async function revertItem(item: MediaItem, config: AppConfig): Promise<void> {
-	requireConfig(config, ['plexUrl', 'plexToken']);
+	const server = requireActiveServerOrThrow(config);
 	if (item.currentPosterUrl) {
-		await uploadPosterFromUrl(
-			config.plexUrl!,
-			config.plexToken!,
-			item.ratingKey,
-			item.currentPosterUrl
-		);
+		await server.applyPosterUrl(item.ratingKey, item.currentPosterUrl);
 	}
-	await setPosterLock(config.plexUrl!, config.plexToken!, item.ratingKey, false);
+	await server.lockField(item.ratingKey, 'poster', false);
 	await db.delete(appliedPosters).where(eq(appliedPosters.mediaItemId, item.id));
 	await db
 		.update(mediaItems)

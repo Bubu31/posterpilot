@@ -1,14 +1,14 @@
 import type { PageServerLoad } from './$types';
 import { publicConfig, resolveConfig } from '$lib/server/config';
-import { listSections } from '$lib/server/plex/client';
-import type { PlexSection } from '$lib/server/types';
+import { getActiveServer, type ServerLibrary } from '$lib/server/media-server';
 
 export const load: PageServerLoad = async () => {
 	const config = await resolveConfig();
-	let sections: PlexSection[] = [];
-	if (config.plexUrl && config.plexToken) {
+	let sections: ServerLibrary[] = [];
+	const server = getActiveServer(config);
+	if (server) {
 		try {
-			sections = await listSections(config.plexUrl, config.plexToken);
+			sections = await server.listLibraries();
 		} catch {
 			sections = [];
 		}

@@ -68,8 +68,14 @@ Add `serverType: 'plex'|'jellyfin'|'emby'` (default `plex`), `jellyfinUrl`, `jel
 4. Add the plex.tv `pins`/`resources` server routes and the Plex login + connection picker UI; add the server-type selector and Jellyfin/Emby credential fields to Settings.
 5. Rollback: the factory still defaults to Plex; reverting the UI/routes leaves the Plex path intact. The added config keys are inert when unused.
 
+## Implementation Notes / Deviations
+
+- **Plex provider wraps `plex/client.ts` in place (no physical move).** To limit churn and risk, the Plex `client.ts`/`parse.ts`/`parse.test.ts` files were NOT relocated under `media-server/plex/` as task 2.1 proposed. Instead `src/lib/server/media-server/plex.ts` exports `plexProvider(baseUrl, token): MediaServer` that delegates to the existing, tested functions. Every existing `$lib/server/plex/*` import keeps working and the Plex path is byte-for-byte unchanged; the provider only re-expresses Plex's quirks (query-string token, `thumb.locked`/`art.locked`) behind the neutral interface. Background apply was added to `plex/client.ts` (`uploadBackgroundFromUrl`/`uploadBackgroundBytes`/`setBackgroundLock`, via the `arts` endpoint and `art.locked`) so the Plex provider satisfies the apply-background contract.
+- **Emby/Jellyfin pure mapping is isolated and unit-tested.** `media-server/emby-parse.ts` (ProviderIds→guids, `/Items` JSON→`ServerItem[]`, image-URL building) and `media-server/plex-auth-parse.ts` (PIN + resources parsing) contain no `$env`/I/O imports and are covered by `emby-parse.test.ts` / `plex-auth-parse.test.ts`. The network layers (`emby.ts`, `plex-auth.ts`) only do fetches and delegate shaping to the pure parsers.
+- **Direct-apply persisted method stays `'plex'`.** The `applied_posters.method` enum is `['plex','kometa']`; to avoid a DB migration the direct-server method is still persisted as `'plex'` regardless of the active provider (it is an internal value). `plexClientId` lives in the settings key/value table via `saveSettings` — no schema change.
+
 ## Open Questions
 
-- Exact Jellyfin vs Emby auth header (`Authorization: MediaBrowser Token="…"` vs `X-Emby-Token`/`X-MediaBrowser-Token`) and image POST body encoding (base64 vs raw) — confirm against live servers during build; isolated in the `flavor` config.
+- Exact Jellyfin vs Emby auth header (`Authorization: MediaBrowser Token="…"` vs `X-Emby-Token`/`X-MediaBrowser-Token`) and image POST body encoding (base64 vs raw) — implemented per the documented contract (base64 body + image content-type, auth header behind the `flavor` flag) but **not yet verified against live Jellyfin/Emby servers**; isolated in the `flavor` config for easy adjustment.
 - Whether to auto-run connection discovery immediately after a successful PIN login (one fewer click) vs. on explicit user action — default to auto-run, then let the user re-pick.
 - Whether Kometa export stays Plex-only conceptually or is offered for Jellyfin/Emby users too (Kometa is Plex/PMM-oriented) — keep it available but documented as Plex/PMM-targeted.

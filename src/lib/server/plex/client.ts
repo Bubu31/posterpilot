@@ -92,7 +92,10 @@ export interface PlexConnectionResult {
  * @param token The `X-Plex-Token` to authenticate with.
  * @returns Connection status with server name/version on success, or a reason.
  */
-export async function testConnection(baseUrl: string, token: string): Promise<PlexConnectionResult> {
+export async function testConnection(
+	baseUrl: string,
+	token: string
+): Promise<PlexConnectionResult> {
 	const url = `${normalizeBase(baseUrl)}/identity`;
 	try {
 		const res = await fetch(url, { headers: plexHeaders(token) });
@@ -271,14 +274,86 @@ export async function setPosterLock(
 	ratingKey: string,
 	locked: boolean
 ): Promise<void> {
+	await setFieldLock(baseUrl, token, ratingKey, 'thumb', locked, 'poster');
+}
+
+/**
+ * Apply a background/art image to an item by URL and lock the art field. Mirrors
+ * {@link uploadPosterFromUrl} but targets the Plex `arts` endpoint and `art.locked`.
+ */
+export async function uploadBackgroundFromUrl(
+	baseUrl: string,
+	token: string,
+	ratingKey: string,
+	backgroundUrl: string
+): Promise<void> {
+	const base = normalizeBase(baseUrl);
+	const key = encodeURIComponent(ratingKey);
+	const encodedUrl = encodeURIComponent(backgroundUrl);
+	const encodedToken = encodeURIComponent(token);
+
+	const uploadUrl = `${base}/library/metadata/${key}/arts?url=${encodedUrl}&X-Plex-Token=${encodedToken}`;
+	const uploadRes = await fetch(uploadUrl, { method: 'POST', headers: plexHeaders(token) });
+	if (!uploadRes.ok) {
+		throw new Error(
+			`Plex rejected the background upload: HTTP ${uploadRes.status} ${uploadRes.statusText}`
+		);
+	}
+	await setBackgroundLock(baseUrl, token, ratingKey, true);
+}
+
+/**
+ * Upload raw image bytes as an item's background/art and lock the art field.
+ * Mirrors {@link uploadPosterBytes} against the Plex `arts` endpoint.
+ */
+export async function uploadBackgroundBytes(
+	baseUrl: string,
+	token: string,
+	ratingKey: string,
+	data: ArrayBuffer,
+	contentType = 'image/jpeg'
+): Promise<void> {
+	const base = normalizeBase(baseUrl);
+	const key = encodeURIComponent(ratingKey);
+	const url = `${base}/library/metadata/${key}/arts?X-Plex-Token=${encodeURIComponent(token)}`;
+	const res = await fetch(url, {
+		method: 'POST',
+		headers: { 'X-Plex-Token': token, 'Content-Type': contentType },
+		body: data
+	});
+	if (!res.ok) {
+		throw new Error(`Plex rejected the background upload: HTTP ${res.status} ${res.statusText}`);
+	}
+	await setBackgroundLock(baseUrl, token, ratingKey, true);
+}
+
+/** Lock or unlock an item's background/art field (`art.locked`). */
+export async function setBackgroundLock(
+	baseUrl: string,
+	token: string,
+	ratingKey: string,
+	locked: boolean
+): Promise<void> {
+	await setFieldLock(baseUrl, token, ratingKey, 'art', locked, 'background');
+}
+
+/** Shared PUT that toggles a Plex metadata lock field (`thumb.locked`/`art.locked`). */
+async function setFieldLock(
+	baseUrl: string,
+	token: string,
+	ratingKey: string,
+	field: 'thumb' | 'art',
+	locked: boolean,
+	label: string
+): Promise<void> {
 	const base = normalizeBase(baseUrl);
 	const key = encodeURIComponent(ratingKey);
 	const encodedToken = encodeURIComponent(token);
-	const url = `${base}/library/metadata/${key}?thumb.locked=${locked ? 1 : 0}&X-Plex-Token=${encodedToken}`;
+	const url = `${base}/library/metadata/${key}?${field}.locked=${locked ? 1 : 0}&X-Plex-Token=${encodedToken}`;
 	const res = await fetch(url, { method: 'PUT', headers: plexHeaders(token) });
 	if (!res.ok) {
 		throw new Error(
-			`Plex rejected ${locked ? 'locking' : 'unlocking'} the poster: HTTP ${res.status} ${res.statusText}`
+			`Plex rejected ${locked ? 'locking' : 'unlocking'} the ${label}: HTTP ${res.status} ${res.statusText}`
 		);
 	}
 }

@@ -1,16 +1,20 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { resolveConfig } from '$lib/server/config';
-import { listSections } from '$lib/server/plex/client';
+import { resolveActiveServer, serverTypeLabel } from '$lib/server/media-server';
 
-/** List the Plex movie/show sections (for choosing which libraries to sync). */
+/** List the active server's movie/show libraries (for choosing which to sync). */
 export const GET: RequestHandler = async () => {
 	const config = await resolveConfig();
-	if (!config.plexUrl || !config.plexToken) {
-		return json({ sections: [], error: 'Plex URL/token not configured' });
+	const { server, missing } = resolveActiveServer(config);
+	if (!server) {
+		return json({
+			sections: [],
+			error: `${serverTypeLabel(config.serverType)} not configured (missing: ${missing.join(', ')})`
+		});
 	}
 	try {
-		const sections = await listSections(config.plexUrl, config.plexToken);
+		const sections = await server.listLibraries();
 		return json({ sections });
 	} catch (e) {
 		return json({ sections: [], error: e instanceof Error ? e.message : String(e) });

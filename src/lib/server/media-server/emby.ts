@@ -1,0 +1,170 @@
+/**
+ * Jellyfin / Emby provider.
+ *
+ * Jellyfin forked from Emby, so their relevant HTTP endpoints match: identity via
+ * `GET /System/Info`, library + item listing via `/Items`, external ids in
+ * `ProviderIds`, current art via `/Items/{id}/Images/{type}`, and apply via
+ * `POST /Items/{id}/Images/{type}`. The few real differences (auth header name)
+ * are isolated behind the `flavor` flag.
+ *
+ * All pure mapping (ProviderIds → guids, `/Items` JSON → `ServerItem[]`) lives in
+ * `emby-parse.ts` and is unit-tested; this module only does the network calls.
+ */
+
+import { mapItems, mapLibraries, type RawEmbyItemsResponse } from './emby-parse';
+import type { ConnectionResult, LockField, MediaServer, ServerItem, ServerLibrary } from './types';
+
+export type EmbyFlavor = 'jellyfin' | 'emby';
+
+/** Strip a single trailing slash so paths concatenate cleanly. */
+function normalizeBase(baseUrl: string): string {
+	return baseUrl.replace(/\/+$/, '');
+}
+
+/**
+ * Auth + accept headers for the chosen flavor. Jellyfin authenticates via
+ * `Authorization: MediaBrowser Token="<key>"`; Emby via `X-Emby-Token: <key>`.
+ * Both also commonly accept `X-MediaBrowser-Token`, which we send for resilience.
+ */
+function authHeaders(apiKey: string, flavor: EmbyFlavor): Record<string, string> {
+	const common: Record<string, string> = {
+		Accept: 'application/json',
+		'X-MediaBrowser-Token': apiKey
+	};
+	if (flavor === 'jellyfin') {
+		return {
+			...common,
+			Authorization: `MediaBrowser Token="${apiKey}"`
+		};
+	}
+	return {
+		...common,
+		'X-Emby-Token': apiKey
+	};
+}
+
+interface SystemInfo {
+	ServerName?: string;
+	Version?: string;
+}
+
+/** Convert image bytes to a base64 string (the documented image POST body). */
+function toBase64(data: ArrayBuffer): string {
+	return Buffer.from(data).toString('base64');
+}
+
+/**
+ * Construct a Jellyfin/Emby `MediaServer` bound to a base URL + API key.
+ *
+ * @param baseUrl The server base URL.
+ * @param apiKey The API key used for authentication.
+ * @param flavor `jellyfin` or `emby` — selects the auth header dialect.
+ */
+export function embyLikeProvider(baseUrl: string, apiKey: string, flavor: EmbyFlavor): MediaServer {
+	const base = normalizeBase(baseUrl);
+	const headers = authHeaders(apiKey, flavor);
+	const label = flavor === 'jellyfin' ? 'Jellyfin' : 'Emby';
+
+	async function getJson<T>(path: string): Promise<T> {
+		const res = await fetch(`${base}${path}`, { headers });
+		if (!res.ok) {
+			throw new Error(`${label} returned HTTP ${res.status} ${res.statusText} for ${path}`);
+		}
+		return (await res.json()) as T;
+	}
+
+	/** POST raw image bytes (base64 body + image content-type) to an Images endpoint. */
+	async function postImage(
+		itemId: string,
+		imageType: 'Primary' | 'Backdrop',
+		data: ArrayBuffer,
+		contentType: string
+	): Promise<void> {
+		const url = `${base}/Items/${encodeURIComponent(itemId)}/Images/${imageType}`;
+		const res = await fetch(url, {
+			method: 'POST',
+			headers: { ...headers, 'Content-Type': contentType },
+			body: toBase64(data)
+		});
+		if (!res.ok) {
+			throw new Error(`${label} rejected the image upload: HTTP ${res.status} ${res.statusText}`);
+		}
+	}
+
+	/** Fetch an image URL into bytes + its content type for byte-based apply. */
+	async function fetchImage(url: string): Promise<{ data: ArrayBuffer; contentType: string }> {
+		const res = await fetch(url);
+		if (!res.ok) {
+			throw new Error(`Could not fetch image (${res.status} ${res.statusText}): ${url}`);
+		}
+		const contentType = res.headers.get('content-type') ?? 'image/jpeg';
+		return { data: await res.arrayBuffer(), contentType };
+	}
+
+	return {
+		type: flavor,
+
+		async testConnection(): Promise<ConnectionResult> {
+			try {
+				const res = await fetch(`${base}/System/Info`, { headers });
+				if (res.status === 401 || res.status === 403) {
+					return {
+						ok: false,
+						unauthorized: true,
+						error: `Unauthorized: the ${label} API key was rejected (${res.status}).`
+					};
+				}
+				if (!res.ok) {
+					return { ok: false, error: `${label} returned HTTP ${res.status} ${res.statusText}.` };
+				}
+				const info = (await res.json()) as SystemInfo;
+				return { ok: true, serverName: info.ServerName, version: info.Version };
+			} catch (err) {
+				const reason = err instanceof Error ? err.message : String(err);
+				return { ok: false, error: `Unreachable: could not connect to ${label} (${reason}).` };
+			}
+		},
+
+		async listLibraries(): Promise<ServerLibrary[]> {
+			// MediaFolders enumerates the top-level libraries with their CollectionType.
+			const res = await getJson<RawEmbyItemsResponse>('/Library/MediaFolders');
+			return mapLibraries(res);
+		},
+
+		async listItems(libraryKey: string): Promise<ServerItem[]> {
+			const params = new URLSearchParams({
+				ParentId: libraryKey,
+				Recursive: 'true',
+				IncludeItemTypes: 'Movie,Series',
+				Fields: 'ProviderIds,ProductionYear',
+				EnableImageTypes: 'Primary,Backdrop'
+			});
+			const res = await getJson<RawEmbyItemsResponse>(`/Items?${params.toString()}`);
+			return mapItems(res, base, apiKey);
+		},
+
+		async applyPosterUrl(itemId: string, url: string): Promise<void> {
+			const { data, contentType } = await fetchImage(url);
+			await postImage(itemId, 'Primary', data, contentType);
+		},
+
+		async applyPosterBytes(itemId, data, contentType = 'image/jpeg'): Promise<void> {
+			await postImage(itemId, 'Primary', data, contentType);
+		},
+
+		async applyBackgroundUrl(itemId: string, url: string): Promise<void> {
+			const { data, contentType } = await fetchImage(url);
+			await postImage(itemId, 'Backdrop', data, contentType);
+		},
+
+		async applyBackgroundBytes(itemId, data, contentType = 'image/jpeg'): Promise<void> {
+			await postImage(itemId, 'Backdrop', data, contentType);
+		},
+
+		// Jellyfin/Emby do not auto-replace an explicitly set image, so there is no
+		// lock concept. The interface still exposes lockField for parity.
+		async lockField(_itemId: string, _field: LockField, _locked: boolean): Promise<void> {
+			// no-op
+		}
+	};
+}

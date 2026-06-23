@@ -5,10 +5,21 @@ import { settings } from '$lib/server/db/schema';
 
 export type ApplyMethod = 'plex' | 'kometa' | 'both';
 
+/** The active media-server backend. */
+export type ServerType = 'plex' | 'jellyfin' | 'emby';
+
 /** Effective runtime configuration. Secrets are null when unset. */
 export interface AppConfig {
+	/** Which media-server backend is active. */
+	serverType: ServerType;
 	plexUrl: string | null;
 	plexToken: string | null;
+	/** Stable per-install identifier sent to plex.tv (PIN login / discovery). */
+	plexClientId: string | null;
+	jellyfinUrl: string | null;
+	jellyfinApiKey: string | null;
+	embyUrl: string | null;
+	embyApiKey: string | null;
 	tmdbKey: string | null;
 	kometaAssetsDir: string;
 	mediuxDelayMs: number;
@@ -27,13 +38,25 @@ export interface AppConfig {
 }
 
 /** Config keys that are secrets — never returned to the client, redacted in logs. */
-export const SECRET_KEYS = ['plexToken', 'tmdbKey', 'fanartKey'] as const;
+export const SECRET_KEYS = [
+	'plexToken',
+	'jellyfinApiKey',
+	'embyApiKey',
+	'tmdbKey',
+	'fanartKey'
+] as const;
 type ConfigKey = keyof AppConfig;
 
 /** Settings key -> environment variable name. Env always overrides persisted settings. */
 const ENV_MAP: Record<ConfigKey, string> = {
+	serverType: 'SERVER_TYPE',
 	plexUrl: 'PLEX_URL',
 	plexToken: 'PLEX_TOKEN',
+	plexClientId: 'PLEX_CLIENT_ID',
+	jellyfinUrl: 'JELLYFIN_URL',
+	jellyfinApiKey: 'JELLYFIN_API_KEY',
+	embyUrl: 'EMBY_URL',
+	embyApiKey: 'EMBY_API_KEY',
 	tmdbKey: 'TMDB_KEY',
 	kometaAssetsDir: 'KOMETA_ASSETS_DIR',
 	mediuxDelayMs: 'MEDIUX_REQUEST_DELAY_MS',
@@ -49,6 +72,7 @@ const ENV_MAP: Record<ConfigKey, string> = {
 };
 
 const DEFAULTS = {
+	serverType: 'plex' as ServerType,
 	kometaAssetsDir: './data/kometa',
 	mediuxDelayMs: 2000,
 	mediuxConcurrency: 5,
@@ -64,8 +88,14 @@ const DEFAULTS = {
 
 /** Persisted-settings keys that the UI is allowed to write. */
 export const WRITABLE_KEYS: ConfigKey[] = [
+	'serverType',
 	'plexUrl',
 	'plexToken',
+	'plexClientId',
+	'jellyfinUrl',
+	'jellyfinApiKey',
+	'embyUrl',
+	'embyApiKey',
 	'tmdbKey',
 	'kometaAssetsDir',
 	'mediuxDelayMs',
@@ -123,13 +153,25 @@ function parseSections(value: string | undefined): string[] {
 		.filter(Boolean);
 }
 
+/** Parse the active server type, defaulting to `plex` for unknown/empty values. */
+function parseServerType(value: string | undefined): ServerType {
+	const t = value?.trim().toLowerCase();
+	return t === 'jellyfin' || t === 'emby' ? t : DEFAULTS.serverType;
+}
+
 /** Resolve the effective configuration (env over persisted settings). Server-only. */
 export async function resolveConfig(): Promise<AppConfig> {
 	const persisted = await loadSettings();
 	const method = rawValue('defaultApplyMethod', persisted) as ApplyMethod | undefined;
 	return {
+		serverType: parseServerType(rawValue('serverType', persisted)),
 		plexUrl: rawValue('plexUrl', persisted) ?? null,
 		plexToken: rawValue('plexToken', persisted) ?? null,
+		plexClientId: rawValue('plexClientId', persisted) ?? null,
+		jellyfinUrl: rawValue('jellyfinUrl', persisted) ?? null,
+		jellyfinApiKey: rawValue('jellyfinApiKey', persisted) ?? null,
+		embyUrl: rawValue('embyUrl', persisted) ?? null,
+		embyApiKey: rawValue('embyApiKey', persisted) ?? null,
 		tmdbKey: rawValue('tmdbKey', persisted) ?? null,
 		kometaAssetsDir: rawValue('kometaAssetsDir', persisted) ?? DEFAULTS.kometaAssetsDir,
 		mediuxDelayMs: toInt(rawValue('mediuxDelayMs', persisted), DEFAULTS.mediuxDelayMs),
@@ -172,6 +214,37 @@ export function requireConfig(config: AppConfig, keys: ConfigKey[]): void {
 	if (missing.length) throw new MissingConfigError(missing);
 }
 
+/** The credential keys required for a given active server type. */
+export function requiredKeysFor(serverType: ServerType): ConfigKey[] {
+	switch (serverType) {
+		case 'jellyfin':
+			return ['jellyfinUrl', 'jellyfinApiKey'];
+		case 'emby':
+			return ['embyUrl', 'embyApiKey'];
+		case 'plex':
+		default:
+			return ['plexUrl', 'plexToken'];
+	}
+}
+
+/** Throw MissingConfigError if the active server type's credentials are unset. */
+export function requireActiveServer(config: AppConfig): void {
+	requireConfig(config, requiredKeysFor(config.serverType));
+}
+
+/**
+ * Return the stable plex.tv client identifier, generating and persisting one on
+ * first use. Sent as `X-Plex-Client-Identifier` for PIN login and discovery so
+ * plex.tv treats this install as a single consistent client.
+ */
+export async function ensurePlexClientId(): Promise<string> {
+	const config = await resolveConfig();
+	if (config.plexClientId) return config.plexClientId;
+	const id = crypto.randomUUID();
+	await saveSettings({ plexClientId: id });
+	return id;
+}
+
 /** Persist UI-supplied settings. Empty string clears a key. Ignores non-writable keys. */
 export async function saveSettings(values: Partial<Record<ConfigKey, string>>): Promise<void> {
 	const entries = Object.entries(values).filter(([k]) => WRITABLE_KEYS.includes(k as ConfigKey));
@@ -192,8 +265,13 @@ export async function saveSettings(values: Partial<Record<ConfigKey, string>>): 
  * key reports whether it is environment-managed (read-only in the UI).
  */
 export interface PublicConfig {
+	serverType: ServerType;
 	plexUrl: string | null;
 	plexTokenSet: boolean;
+	jellyfinUrl: string | null;
+	jellyfinApiKeySet: boolean;
+	embyUrl: string | null;
+	embyApiKeySet: boolean;
 	tmdbKeySet: boolean;
 	kometaAssetsDir: string;
 	mediuxDelayMs: number;
@@ -214,8 +292,13 @@ export async function publicConfig(): Promise<PublicConfig> {
 	const envManaged: Partial<Record<ConfigKey, boolean>> = {};
 	for (const k of WRITABLE_KEYS) envManaged[k] = isEnvManaged(k);
 	return {
+		serverType: c.serverType,
 		plexUrl: c.plexUrl,
 		plexTokenSet: c.plexToken !== null,
+		jellyfinUrl: c.jellyfinUrl,
+		jellyfinApiKeySet: c.jellyfinApiKey !== null,
+		embyUrl: c.embyUrl,
+		embyApiKeySet: c.embyApiKey !== null,
 		tmdbKeySet: c.tmdbKey !== null,
 		kometaAssetsDir: c.kometaAssetsDir,
 		mediuxDelayMs: c.mediuxDelayMs,

@@ -1,16 +1,20 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { resolveConfig } from '$lib/server/config';
-import { testConnection } from '$lib/server/plex/client';
+import { resolveActiveServer, serverTypeLabel } from '$lib/server/media-server';
 import { resolveTmdb } from '$lib/server/tmdb/client';
 
-/** Test connectivity to Plex and TMDB using the effective configuration. */
+/** Test connectivity to the active media server and TMDB using the effective config. */
 export const POST: RequestHandler = async () => {
 	const config = await resolveConfig();
 
-	const plex = config.plexUrl && config.plexToken
-		? await testConnection(config.plexUrl, config.plexToken)
-		: { ok: false, error: 'Plex URL/token not configured' };
+	const { server, missing } = resolveActiveServer(config);
+	const plex = server
+		? await server.testConnection()
+		: {
+				ok: false,
+				error: `${serverTypeLabel(config.serverType)} not configured (missing: ${missing.join(', ')})`
+			};
 
 	let tmdb: { ok: boolean; error?: string };
 	if (!config.tmdbKey) {
@@ -25,5 +29,5 @@ export const POST: RequestHandler = async () => {
 		}
 	}
 
-	return json({ plex, tmdb });
+	return json({ serverType: config.serverType, plex, tmdb });
 };
