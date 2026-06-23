@@ -15,3 +15,5 @@ src/lib/paraglide
 docs
 # Brand/design assets
 artwork
+# Generated and owned by release-please
+CHANGELOG.md
