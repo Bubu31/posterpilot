@@ -7,13 +7,18 @@
  * (`self.__next_f.push([...])` chunks). We decode that payload and read the file
  * records directly — one network request per item, no per-set fetches.
  *
- * Each file looks like:
+ * A file looks like:
  *   {"set_id":{"id":"8472",...},"id":"<uuid>","filename_disk":"<uuid>.jpg",
  *    "title":"2 Fast 2 Furious (2003)","fileType":"poster", ...}
  * and the asset is served at https://api.mediux.pro/assets/<uuid>.
+ *
+ * A movie's page also includes its whole franchise: "matching sets" carry one file
+ * per sibling title (e.g. "Fast & Furious 6 (2013)"). We therefore keep only files
+ * whose title matches the *target* item, identified from the embedded
+ * `"movie"|"show":{"id":"<tmdbId>","title"|"name":"…"}` object.
  */
 
-import type { CandidateKind, MediuxCandidate, MediuxSet } from '$lib/server/types';
+import type { CandidateKind, MediuxCandidate, MediuxSet, TmdbMediaType } from '$lib/server/types';
 
 const ASSET_BASE = 'https://api.mediux.pro/assets';
 
@@ -47,6 +52,42 @@ function unescapeJsonString(escaped: string): string {
 	}
 }
 
+function normalize(s: string): string {
+	return s
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, ' ')
+		.trim();
+}
+
+/** The target item's display title from the embedded movie/show object, or null. */
+export function extractTargetTitle(rsc: string, tmdbId: string): string | null {
+	const re = new RegExp(
+		`"(?:movie|show)":\\{"id":"${tmdbId}","(?:title|name)":"((?:[^"\\\\]|\\\\.)*)"`
+	);
+	const m = rsc.match(re);
+	return m ? unescapeJsonString(m[1]) : null;
+}
+
+/**
+ * Whether a file title belongs to the target item.
+ * - Movie-style titles carry a year ("Title (YYYY)") → require an exact match of the
+ *   title sans year, which keeps "2 Fast 2 Furious (2003)" but rejects franchise
+ *   siblings like "Fast & Furious 6 (2013)".
+ * - Year-less titles are TV files ("Show S01E03", "Show Season 2") → match by prefix.
+ */
+export function titleMatchesTarget(fileTitle: string, targetTitle: string | null): boolean {
+	if (!targetTitle) return true; // couldn't identify the target → don't over-filter
+	const target = normalize(targetTitle.replace(/\(\d{4}\)/g, ''));
+	if (!target) return true;
+	if (/\(\d{4}\)/.test(fileTitle)) {
+		const sansYear = normalize(
+			fileTitle.replace(/\(\d{4}\)/g, '').replace(/\s*-\s*ost\b/i, '')
+		);
+		return sansYear === target;
+	}
+	return normalize(fileTitle).startsWith(target);
+}
+
 /** Map a mediux fileType + title to a candidate kind, or null to skip the file. */
 function classify(
 	fileType: string,
@@ -70,31 +111,24 @@ function classify(
 	return null;
 }
 
-// Set headers look like "id":"8472","set_name":"2 Fast 2 Furious (2003) Set".
-const SET_NAME_RE = /"id":"(\d+)","set_name":"((?:[^"\\]|\\.)*)"/g;
-
 /**
- * Extract the candidate sets for the *target* item from its listing-page HTML.
- *
- * The page embeds the item's own user sets plus its whole collection — collection
- * sets (named "… Collection") hold artwork for sibling titles, so they are dropped.
- * The rest are grouped by set, newest set first. Returns `[]` when nothing
- * parseable is found.
+ * Extract the candidate sets for the target item from its listing-page HTML, grouped
+ * by set (newest set first). For movies, files are filtered to the target title so a
+ * collection/franchise page doesn't surface sibling-title artwork; show pages aren't
+ * collection-contaminated, so all of the show's files are kept. Returns `[]` when
+ * nothing parseable is found.
  */
-export function parseListingSets(html: string): MediuxSet[] {
+export function parseListingSets(
+	html: string,
+	tmdbId: string,
+	mediaType: TmdbMediaType
+): MediuxSet[] {
 	const rsc = decodeRscPayload(html);
 	if (!rsc) return [];
 
-	// set id -> set name, so we can drop collection sets (sibling-title artwork).
-	const setNames = new Map<string, string>();
-	for (const m of rsc.matchAll(SET_NAME_RE)) {
-		setNames.set(m[1], unescapeJsonString(m[2]));
-	}
+	const targetTitle = mediaType === 'movie' ? extractTargetTitle(rsc, tmdbId) : null;
 
-	const setMarks = [...rsc.matchAll(SET_MARK_RE)].map((m) => ({
-		idx: m.index ?? 0,
-		setId: m[1]
-	}));
+	const setMarks = [...rsc.matchAll(SET_MARK_RE)].map((m) => ({ idx: m.index ?? 0, setId: m[1] }));
 	const setIdBefore = (idx: number): string => {
 		let found = 'unknown';
 		for (const mark of setMarks) {
@@ -107,10 +141,12 @@ export function parseListingSets(html: string): MediuxSet[] {
 	const bySet = new Map<string, MediuxCandidate[]>();
 	const order: string[] = [];
 	for (const m of rsc.matchAll(FILE_RE)) {
-		const mapped = classify(m[3], unescapeJsonString(m[2]));
+		const title = unescapeJsonString(m[2]);
+		// Movie pages include franchise siblings; show pages do not.
+		if (mediaType === 'movie' && !titleMatchesTarget(title, targetTitle)) continue;
+		const mapped = classify(m[3], title);
 		if (!mapped) continue;
 		const setId = setIdBefore(m.index ?? 0);
-		if (/collection/i.test(setNames.get(setId) ?? '')) continue; // sibling-title artwork
 		const candidate: MediuxCandidate = {
 			setId,
 			url: `${ASSET_BASE}/${m[1]}`,

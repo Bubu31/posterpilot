@@ -47,5 +47,5 @@ export async function discoverCandidates(
 		forceRefresh: opts.forceRefresh,
 		retries: 2
 	});
-	return parseListingSets(html);
+	return parseListingSets(html, tmdbId, mediaType);
 }
