@@ -1,9 +1,9 @@
 ## 1. Project scaffold
 
 - [x] 1.1 Initialize a SvelteKit + TypeScript project on Bun (adapter-node, run under Bun)
-- [ ] 1.2 Add Tailwind CSS and a Svelte component library (bits-ui / shadcn-svelte) with a dark, image-forward base theme
+- [x] 1.2 Add Tailwind CSS v4 with a dark, image-forward base theme (custom Svelte components instead of an external component library)
 - [ ] 1.3 Configure linting/formatting and add `fallow` (`npx fallow health` / `dead-code`) as a dev/CI check
-- [ ] 1.4 Set up project structure: `src/lib/server/{plex,tmdb,mediux,posters,jobs,db,config}` and route folders
+- [x] 1.4 Set up project structure: `src/lib/server/{plex,tmdb,mediux,posters,jobs,db,config,http,kometa}`, `src/lib/components`, and route folders
 - [x] 1.5 Add a `.env.example` documenting `PLEX_URL`, `PLEX_TOKEN`, `TMDB_KEY`, `KOMETA_ASSETS_DIR`, `DATABASE_URL`, `PORT`, scraping knobs
 
 ## 2. Persistence (SQLite + Drizzle)
@@ -51,18 +51,18 @@
 
 - [x] 8.1 Implement an in-process job queue + async worker with bounded concurrency
 - [x] 8.2 Implement job types: library sync, bulk discovery, bulk apply
-- [ ] 8.3 Implement SSE progress streaming (processed/total, current item, status), including snapshot-on-subscribe for in-progress jobs
+- [x] 8.3 Implement SSE progress streaming (processed/total, current item, status), including snapshot-on-subscribe for in-progress jobs
 - [x] 8.4 Implement job cancellation and persist job history; mark interrupted jobs failed on startup
 - [ ] 8.5 Tests for progress reporting, cancellation, and restart handling
 
 ## 9. Web UI
 
-- [ ] 9.1 Dashboard route: stats, last sync, active jobs
-- [ ] 9.2 Library grid: poster grid with type/missing-poster/has-mediux filters and title search; empty state
-- [ ] 9.3 Item detail: current vs. candidate comparison, preview, select, apply with method toggle; "find covers" action when none discovered
-- [ ] 9.4 Bulk actions: multi-select + bulk discover/apply launching a background job
-- [ ] 9.5 Jobs view: active + past jobs with live SSE progress
-- [ ] 9.6 Settings view: enter/test Plex + TMDB, Kometa dir, default apply method; inline validation
+- [x] 9.1 Dashboard route: stats, last sync, active jobs
+- [x] 9.2 Library grid: poster grid with type/missing-poster/has-mediux filters and title search; empty state
+- [x] 9.3 Item detail: current vs. candidate comparison, preview, select, apply with method toggle; "find covers" action when none discovered
+- [x] 9.4 Bulk actions: multi-select + bulk discover/apply launching a background job
+- [x] 9.5 Jobs view: active + past jobs with live SSE progress
+- [x] 9.6 Settings view: enter/test Plex + TMDB, Kometa dir, default apply method; inline validation
 
 ## 10. Packaging & deployment
 
