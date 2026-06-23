@@ -158,7 +158,6 @@
 	"settings_libraries_connect_first": "サーバーを接続して保存し、ライブラリを選択します。",
 	"settings_libraries_hint": "同期しないライブラリのチェックを外します。",
 	"settings_language": "優先言語",
-	"settings_language_hint": "ブラウザーの設定、次に英語にフォールバックします。",
 	"settings_save": "保存",
 	"settings_saving": "保存中…",
 	"settings_test_connections": "接続をテスト",
@@ -216,5 +215,6 @@
 	"setup_done": "完了！ライブラリを取り込んでいます。",
 	"setup_jellyfin_choose": "Jellyfin",
 	"setup_emby_choose": "Emby",
-	"setup_plex_choose": "Plex"
+	"setup_plex_choose": "Plex",
+	"footer_disclaimer": "Plex、Jellyfin、Emby、TMDB、MediUX、Fanart.tv、ThePosterDB とは提携・公認関係にありません。商標は各所有者に帰属します。"
 }

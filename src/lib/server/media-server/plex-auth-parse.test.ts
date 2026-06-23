@@ -65,6 +65,30 @@ describe('parseConnections', () => {
 		expect(result[1]).toMatchObject({ uri: 'https://1.2.3.4:32400', local: false, https: true });
 	});
 
+	it('adds a plain-IP option (no plex.direct) for local connections with a port', () => {
+		const resources: RawResource[] = [
+			{
+				name: 'Unraid',
+				provides: 'server',
+				connections: [
+					{
+						uri: 'https://192-168-64-169.abc.plex.direct:32400',
+						address: '192.168.64.169',
+						port: 32400,
+						local: true,
+						protocol: 'https'
+					}
+				]
+			}
+		];
+		const result = parseConnections(resources);
+		expect(result.map((c) => c.uri)).toEqual([
+			'http://192.168.64.169:32400',
+			'https://192-168-64-169.abc.plex.direct:32400'
+		]);
+		expect(result[0]).toMatchObject({ local: true, relay: false, https: false });
+	});
+
 	it('orders local before remote, and non-relay before relay within a group', () => {
 		const resources: RawResource[] = [
 			{

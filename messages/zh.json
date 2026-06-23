@@ -158,7 +158,6 @@
 	"settings_libraries_connect_first": "连接服务器并保存以选择媒体库。",
 	"settings_libraries_hint": "取消勾选不想同步的媒体库。",
 	"settings_language": "首选语言",
-	"settings_language_hint": "回退到浏览器偏好，然后是英文。",
 	"settings_save": "保存",
 	"settings_saving": "保存中…",
 	"settings_test_connections": "测试连接",
@@ -216,5 +215,6 @@
 	"setup_done": "全部就绪！你的媒体库正在导入。",
 	"setup_jellyfin_choose": "Jellyfin",
 	"setup_emby_choose": "Emby",
-	"setup_plex_choose": "Plex"
+	"setup_plex_choose": "Plex",
+	"footer_disclaimer": "与 Plex、Jellyfin、Emby、TMDB、MediUX、Fanart.tv 或 ThePosterDB 无关联，也未获其背书。商标归各自所有者所有。"
 }

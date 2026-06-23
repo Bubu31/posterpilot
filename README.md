@@ -215,6 +215,17 @@ follow the [Code of Conduct](CODE_OF_CONDUCT.md). Report security issues per the
 Scraping behavior is ported from the legacy Python tool `mediux-scraper-monorepo`
 (reference only — no Python code is reused).
 
+## Disclaimer
+
+PosterPilot is an independent, community-built project. It is **not affiliated
+with, endorsed by, or sponsored by** Plex, Jellyfin, Emby, MediUX, Fanart.tv,
+TMDB, ThePosterDB, Kometa, or any other third-party service it integrates with.
+All product names, logos, and trademarks are the property of their respective
+owners and are used here for identification purposes only.
+
+This product uses the TMDB API but is not endorsed or certified by
+[TMDB](https://www.themoviedb.org).
+
 ## License
 
 Released under the [MIT License](LICENSE).

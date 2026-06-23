@@ -158,7 +158,6 @@
 	"settings_libraries_connect_first": "Conecte um servidor e salve para escolher bibliotecas.",
 	"settings_libraries_hint": "Desmarque as que não quiser sincronizar.",
 	"settings_language": "Idioma preferido",
-	"settings_language_hint": "Usa o idioma do navegador como alternativa e, por fim, o inglês.",
 	"settings_save": "Salvar",
 	"settings_saving": "Salvando…",
 	"settings_test_connections": "Testar conexões",
@@ -216,5 +215,6 @@
 	"setup_done": "Tudo pronto! Sua biblioteca está sendo importada.",
 	"setup_jellyfin_choose": "Jellyfin",
 	"setup_emby_choose": "Emby",
-	"setup_plex_choose": "Plex"
+	"setup_plex_choose": "Plex",
+	"footer_disclaimer": "Sem afiliação ou endosso de Plex, Jellyfin, Emby, TMDB, MediUX, Fanart.tv ou ThePosterDB. As marcas pertencem aos seus donos."
 }

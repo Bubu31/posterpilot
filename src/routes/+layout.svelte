@@ -132,5 +132,6 @@
 			{m.app_name()}
 		</a>
 		<span class="text-neutral-700">·</span> v{data.version}
+		<p class="mx-auto mt-1 max-w-2xl text-neutral-700">{m.footer_disclaimer()}</p>
 	</footer>
 </div>

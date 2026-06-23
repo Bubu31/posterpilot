@@ -40,6 +40,7 @@ export function parsePinToken(raw: RawPin | undefined | null): string | null {
 interface RawConnection {
 	uri?: string;
 	address?: string;
+	port?: number | string;
 	local?: boolean;
 	relay?: boolean;
 	protocol?: string;
@@ -69,12 +70,27 @@ export function parseConnections(
 		const serverName = resource.name ?? 'Plex Server';
 		for (const conn of resource.connections ?? []) {
 			if (!conn?.uri) continue;
+			const local = conn.local === true;
+			const relay = conn.relay === true;
+			const address = conn.address ?? '';
+			// For local connections, offer a plain-IP URL (no plex.direct cert host)
+			// first — simpler/faster on a LAN. The plex.direct URI stays as a fallback.
+			if (local && !relay && address && conn.port) {
+				candidates.push({
+					serverName,
+					uri: `http://${address}:${conn.port}`,
+					address,
+					local: true,
+					relay: false,
+					https: false
+				});
+			}
 			candidates.push({
 				serverName,
 				uri: conn.uri,
-				address: conn.address ?? '',
-				local: conn.local === true,
-				relay: conn.relay === true,
+				address,
+				local,
+				relay,
 				https: conn.protocol === 'https' || conn.uri.startsWith('https')
 			});
 		}

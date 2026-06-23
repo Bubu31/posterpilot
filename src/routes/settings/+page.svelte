@@ -410,7 +410,6 @@
 					<option value={loc.code}>{loc.name}</option>
 				{/each}
 			</select>
-			<p class="mt-1 text-xs text-neutral-500">{m.settings_language_hint()}</p>
 		</div>
 	{/if}
 
