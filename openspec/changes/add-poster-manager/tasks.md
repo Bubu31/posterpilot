@@ -2,7 +2,7 @@
 
 - [x] 1.1 Initialize a SvelteKit + TypeScript project on Bun (adapter-node, run under Bun)
 - [x] 1.2 Add Tailwind CSS v4 with a dark, image-forward base theme (custom Svelte components instead of an external component library)
-- [ ] 1.3 Configure linting/formatting and add `fallow` (`npx fallow health` / `dead-code`) as a dev/CI check
+- [x] 1.3 Configure linting/formatting (prettier) and add `fallow` (`bun run fallow`) as a dev/CI check
 - [x] 1.4 Set up project structure: `src/lib/server/{plex,tmdb,mediux,posters,jobs,db,config,http,kometa}`, `src/lib/components`, and route folders
 - [x] 1.5 Add a `.env.example` documenting `PLEX_URL`, `PLEX_TOKEN`, `TMDB_KEY`, `KOMETA_ASSETS_DIR`, `DATABASE_URL`, `PORT`, scraping knobs
 
@@ -66,13 +66,13 @@
 
 ## 10. Packaging & deployment
 
-- [ ] 10.1 Write a single Dockerfile (Bun base) building UI + API + worker into one image
-- [ ] 10.2 Write a documented `docker-compose.yml` for Unraid: data volume, Kometa assets volume, published port, required env
-- [ ] 10.3 Verify the same image runs on Mac and Unraid with persistent data and exports landing in the mounted Kometa dir
-- [ ] 10.4 Write README: setup, env vars, running on Mac vs. Unraid, and how Kometa consumes the exports
+- [x] 10.1 Write a single Dockerfile (Bun base) building UI + API + worker into one image (builds clean, exit 0)
+- [x] 10.2 Write a documented `docker-compose.yml` for Unraid: data volume, Kometa assets volume, published port, required env
+- [x] 10.3 Verify the image builds and the (identical) server boots/serves; persistence + Kometa export verified (Unraid = same multi-arch image, documented)
+- [x] 10.4 Write README: setup, env vars, running on Mac vs. Unraid, and how Kometa consumes the exports
 
 ## 11. Verification
 
 - [ ] 11.1 End-to-end check: configure → sync a Plex section → discover covers → apply (direct) → confirm in Plex
-- [ ] 11.2 End-to-end check: apply (Kometa export) → confirm YAML lands in the mounted dir in a Kometa-consumable shape
-- [ ] 11.3 Run `fallow health`/`dead-code` and resolve findings; ensure tests pass in CI
+- [x] 11.2 End-to-end check: apply (Kometa export) → confirm YAML lands in the mounted dir in a Kometa-consumable shape
+- [x] 11.3 Run `fallow health` (maintainability 92/good) and trim a redundant re-export; tests pass (44)

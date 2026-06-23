@@ -11,6 +11,9 @@
 		"db:generate": "drizzle-kit generate",
 		"test": "vitest run",
 		"test:watch": "vitest",
+		"format": "prettier --write .",
+		"lint": "prettier --check .",
+		"fallow": "bunx fallow health",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
@@ -21,6 +24,8 @@
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@tailwindcss/vite": "^4.3.1",
 		"drizzle-kit": "^0.31.10",
+		"prettier": "^3.8.4",
+		"prettier-plugin-svelte": "^4.1.1",
 		"svelte": "^5.56.1",
 		"svelte-check": "^4.6.0",
 		"tailwindcss": "^4.3.1",

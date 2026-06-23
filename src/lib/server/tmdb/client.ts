@@ -2,14 +2,6 @@ import { fetchJson } from '$lib/server/http';
 import type { PlexGuids, TmdbMediaType, TmdbResolution } from '$lib/server/types';
 import { parseFindResult, pickExternalId, tmdbAuth, type TmdbAuth } from './auth';
 
-export {
-	tmdbAuth,
-	pickExternalId,
-	parseFindResult,
-	type TmdbAuth,
-	type ExternalIdSelection
-} from './auth';
-
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const DEFAULT_CACHE_TTL_DAYS = 30;
 

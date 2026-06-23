@@ -1,0 +1,23 @@
+services:
+  posterpilot:
+    build: .
+    # Or use a prebuilt image instead of build:
+    # image: ghcr.io/yourname/posterpilot:latest
+    container_name: posterpilot
+    ports:
+      - '3000:3000'
+    environment:
+      PORT: '3000'
+      DATABASE_URL: file:/data/posterpilot.db
+      KOMETA_ASSETS_DIR: /kometa
+      # Optional — you can also set these in the Settings UI instead:
+      PLEX_URL: ${PLEX_URL:-}
+      PLEX_TOKEN: ${PLEX_TOKEN:-}
+      TMDB_KEY: ${TMDB_KEY:-}
+    volumes:
+      # Persistent app state (SQLite db + settings + history).
+      - ./data:/data
+      # Mount your Kometa assets/config dir here so exported YAML is picked up.
+      # Unraid example: /mnt/user/appdata/kometa/config:/kometa
+      - ./data/kometa:/kometa
+    restart: unless-stopped
