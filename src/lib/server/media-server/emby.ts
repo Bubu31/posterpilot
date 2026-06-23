@@ -106,7 +106,11 @@ export function embyLikeProvider(baseUrl: string, apiKey: string, flavor: EmbyFl
 
 		async testConnection(): Promise<ConnectionResult> {
 			try {
-				const res = await fetch(`${base}/System/Info`, { headers });
+				// Abort after 8s so an unreachable/wrong URL fails fast instead of hanging.
+				const res = await fetch(`${base}/System/Info`, {
+					headers,
+					signal: AbortSignal.timeout(8000)
+				});
 				if (res.status === 401 || res.status === 403) {
 					return {
 						ok: false,

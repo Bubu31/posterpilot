@@ -98,7 +98,11 @@ export async function testConnection(
 ): Promise<PlexConnectionResult> {
 	const url = `${normalizeBase(baseUrl)}/identity`;
 	try {
-		const res = await fetch(url, { headers: plexHeaders(token) });
+		// Abort after 8s so an unreachable/wrong URL fails fast instead of hanging.
+		const res = await fetch(url, {
+			headers: plexHeaders(token),
+			signal: AbortSignal.timeout(8000)
+		});
 		if (res.status === 401) {
 			return { ok: false, error: 'Unauthorized: the Plex token was rejected (401).' };
 		}
@@ -125,7 +129,10 @@ export async function testConnection(
 /** Best-effort lookup of the server's friendly name via the root endpoint. */
 async function fetchFriendlyName(baseUrl: string, token: string): Promise<string | undefined> {
 	try {
-		const res = await fetch(`${normalizeBase(baseUrl)}/`, { headers: plexHeaders(token) });
+		const res = await fetch(`${normalizeBase(baseUrl)}/`, {
+			headers: plexHeaders(token),
+			signal: AbortSignal.timeout(8000)
+		});
 		if (!res.ok) return undefined;
 		const root = ((await res.json()) as PlexResponse<ServerRootContainer>).MediaContainer ?? {};
 		return root.friendlyName;
