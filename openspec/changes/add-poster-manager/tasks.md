@@ -20,24 +20,24 @@
 
 ## 4. Plex integration
 
-- [ ] 4.1 Implement a thin Plex client: connection test (server identity), token auth
-- [ ] 4.2 List movie/show sections; list section items with rating key, title, year, type, GUIDs, current poster URL
-- [ ] 4.3 Implement `uploadPosterFromUrl(ratingKey, url)` with poster-field locking and error reporting
-- [ ] 4.4 Cover the client with tests against recorded Plex responses
+- [x] 4.1 Implement a thin Plex client: connection test (server identity), token auth
+- [x] 4.2 List movie/show sections; list section items with rating key, title, year, type, GUIDs, current poster URL
+- [x] 4.3 Implement `uploadPosterFromUrl(ratingKey, url)` with poster-field locking and error reporting
+- [x] 4.4 Cover the client with tests against recorded Plex responses
 
 ## 5. TMDB resolution
 
-- [ ] 5.1 Implement TMDB client with credential auto-detection (JWT bearer vs. v3 api_key)
-- [ ] 5.2 Resolve GUIDs to TMDB ID + media type (prefer tmdb, then imdb, then tvdb; `find` for external IDs; movie/show classification)
-- [ ] 5.3 Cache resolutions in SQLite with a forced-refresh path
-- [ ] 5.4 Tests for resolution precedence, classification, and cache hit/refresh
+- [x] 5.1 Implement TMDB client with credential auto-detection (JWT bearer vs. v3 api_key)
+- [x] 5.2 Resolve GUIDs to TMDB ID + media type (prefer tmdb, then imdb, then tvdb; `find` for external IDs; movie/show classification)
+- [x] 5.3 Cache resolutions in SQLite with a forced-refresh path
+- [x] 5.4 Tests for resolution precedence, classification, and cache hit/refresh
 
 ## 6. MediaUX scraping
 
-- [ ] 6.1 Implement page fetch for a TMDB ID (movie/show path) and set-link extraction, newest-first
-- [ ] 6.2 Implement set loading + embedded-payload parsing into candidates (poster/background/season/title-card) isolated in one parser with skip-and-continue on parse failure
-- [ ] 6.3 Add bounded concurrency (`p-limit`-style), retry-with-backoff, per-request delay, and SQLite HTTP caching with TTL + forced refresh
-- [ ] 6.4 Fixture-based tests for the parser (including a "structure changed" fixture that must degrade gracefully)
+- [x] 6.1 Implement page fetch for a TMDB ID (movie/show path) and set-link extraction, newest-first
+- [x] 6.2 Implement set loading + embedded-payload parsing into candidates (poster/background/season/title-card) isolated in one parser with skip-and-continue on parse failure
+- [x] 6.3 Add bounded concurrency (`p-limit`-style), retry-with-backoff, per-request delay, and SQLite HTTP caching with TTL + forced refresh
+- [x] 6.4 Fixture-based tests for the parser (including a "structure changed" fixture that must degrade gracefully)
 
 ## 7. Poster application
 
