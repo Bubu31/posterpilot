@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import { SvelteSet } from 'svelte/reactivity';
+	import { m } from '$lib/paraglide/messages';
+	import { setLocale } from '$lib/paraglide/runtime';
 
 	let { data } = $props();
 	const env = data.config.envManaged;
@@ -32,6 +34,9 @@
 	let mediuxConcurrency = $state(String(data.config.mediuxConcurrency));
 	let httpCacheTtlDays = $state(String(data.config.httpCacheTtlDays));
 	let defaultApplyMethod = $state(data.config.defaultApplyMethod);
+	// Preferred UI language — reflects the active locale and writes the same
+	// `language` setting as the header switcher.
+	let language = $state(data.locale);
 
 	let providerMediux = $state(data.config.providerMediux);
 	let providerTmdb = $state(data.config.providerTmdb);
@@ -204,32 +209,52 @@
 	const serverLabel = $derived(
 		serverType === 'jellyfin' ? 'Jellyfin' : serverType === 'emby' ? 'Emby' : 'Plex'
 	);
+
+	// Persist the preferred language through the same path as the header switcher
+	// (writes the `language` setting, then reloads so SSR re-renders in the locale).
+	function changeLanguage(event: Event) {
+		const value = (event.currentTarget as HTMLSelectElement).value;
+		language = value as typeof language;
+		setLocale(value as Parameters<typeof setLocale>[0]);
+	}
 </script>
 
-<h1 class="text-2xl font-semibold tracking-tight">Settings</h1>
+<h1 class="text-2xl font-semibold tracking-tight">{m.settings_title()}</h1>
 
 <div class="mt-6 max-w-xl space-y-5">
 	<div>
-		<label for="serverType" class="mb-1 block text-sm font-medium">Media server</label>
+		<label for="language" class="mb-1 block text-sm font-medium">{m.settings_language()}</label>
+		<select id="language" value={language} onchange={changeLanguage} class="input">
+			{#each data.availableLocales as loc (loc.code)}
+				<option value={loc.code}>{loc.name}</option>
+			{/each}
+		</select>
+		<p class="mt-1 text-xs text-neutral-500">{m.settings_language_hint()}</p>
+	</div>
+
+	<div>
+		<label for="serverType" class="mb-1 block text-sm font-medium"
+			>{m.settings_media_server()}</label
+		>
 		<select id="serverType" bind:value={serverType} disabled={env.serverType} class="input">
 			<option value="plex">Plex</option>
 			<option value="jellyfin">Jellyfin</option>
 			<option value="emby">Emby</option>
 		</select>
-		{#if env.serverType}<p class="mt-1 text-xs text-amber-400">Set from environment</p>{/if}
+		{#if env.serverType}<p class="mt-1 text-xs text-amber-400">{m.settings_set_from_env()}</p>{/if}
 	</div>
 
 	{#if serverType === 'plex'}
 		<div class="surface space-y-4 p-4">
 			<div class="flex items-center justify-between gap-3">
 				<div>
-					<p class="text-sm font-medium">Plex account</p>
+					<p class="text-sm font-medium">{m.settings_plex_account()}</p>
 					<p class="text-xs text-neutral-500">
-						{plexTokenSet ? 'A Plex token is set.' : 'Log in to acquire a token automatically.'}
+						{plexTokenSet ? m.settings_plex_token_set() : m.settings_plex_login_hint()}
 					</p>
 				</div>
 				<button onclick={startPlexLogin} class="btn btn-subtle px-3 py-1.5">
-					{plexTokenSet ? 'Log in again' : 'Log in'}
+					{plexTokenSet ? m.settings_log_in_again() : m.settings_log_in()}
 				</button>
 			</div>
 
@@ -237,7 +262,7 @@
 				{#if login.status === 'pending'}
 					<div class="rounded-md border border-neutral-700 bg-black/40 p-3 text-sm">
 						<p>
-							Open
+							{m.settings_plex_open_link_pre()}
 							<a
 								href={login.linkUrl}
 								target="_blank"
@@ -246,21 +271,21 @@
 							>
 								plex.tv/link
 							</a>
-							and enter this code:
+							{m.settings_plex_open_link_post()}
 						</p>
 						<p class="mt-2 font-mono text-2xl tracking-widest text-accent-200">{login.code}</p>
 						<p class="mt-2 text-xs text-neutral-500">
-							Or
+							{m.settings_plex_or_authorize_pre()}
 							<a
 								href={login.authUrl}
 								target="_blank"
 								rel="noopener"
-								class="text-accent-300 underline">authorize directly</a
-							>. Waiting for authorization…
+								class="text-accent-300 underline">{m.settings_plex_authorize_directly()}</a
+							>{m.settings_plex_waiting()}
 						</p>
 					</div>
 				{:else if login.status === 'done'}
-					<p class="text-sm text-emerald-400">Logged in — Plex token saved.</p>
+					<p class="text-sm text-emerald-400">{m.settings_plex_logged_in()}</p>
 				{:else}
 					<p class="text-sm text-red-400">{login.error}</p>
 				{/if}
@@ -268,13 +293,14 @@
 
 			<div>
 				<div class="flex items-center justify-between">
-					<label for="plexUrl" class="mb-1 block text-sm font-medium">Plex URL</label>
+					<label for="plexUrl" class="mb-1 block text-sm font-medium">{m.settings_plex_url()}</label
+					>
 					<button
 						onclick={loadConnections}
 						disabled={!plexTokenSet || loadingConnections}
 						class="btn btn-ghost px-2 py-1 text-xs"
 					>
-						{loadingConnections ? 'Finding…' : 'Find servers'}
+						{loadingConnections ? m.settings_finding() : m.settings_find_servers()}
 					</button>
 				</div>
 				<input
@@ -284,7 +310,7 @@
 					placeholder="http://192.168.1.10:32400"
 					class="input w-full disabled:opacity-50"
 				/>
-				{#if env.plexUrl}<p class="mt-1 text-xs text-amber-400">Set from environment</p>{/if}
+				{#if env.plexUrl}<p class="mt-1 text-xs text-amber-400">{m.settings_set_from_env()}</p>{/if}
 
 				{#if connectionError}<p class="mt-1 text-xs text-red-400">{connectionError}</p>{/if}
 				{#if connections.length}
@@ -303,9 +329,9 @@
 								</span>
 								<span class="ml-2 flex shrink-0 gap-1">
 									<span class="badge {conn.local ? 'badge-changed' : 'badge-muted'}">
-										{conn.local ? 'local' : 'remote'}
+										{conn.local ? m.settings_local() : m.settings_remote()}
 									</span>
-									{#if conn.relay}<span class="badge badge-muted">relay</span>{/if}
+									{#if conn.relay}<span class="badge badge-muted">{m.settings_relay()}</span>{/if}
 								</span>
 							</button>
 						{/each}
@@ -314,22 +340,30 @@
 			</div>
 
 			<div>
-				<label for="plexToken" class="mb-1 block text-sm font-medium">Plex token (manual)</label>
+				<label for="plexToken" class="mb-1 block text-sm font-medium"
+					>{m.settings_plex_token_manual()}</label
+				>
 				<input
 					id="plexToken"
 					type="password"
 					bind:value={plexToken}
 					disabled={env.plexToken}
-					placeholder={plexTokenSet ? '•••••••• (set — leave blank to keep)' : 'X-Plex-Token'}
+					placeholder={plexTokenSet
+						? m.settings_plex_token_placeholder_set()
+						: m.settings_plex_token_placeholder_unset()}
 					class="input w-full disabled:opacity-50"
 				/>
-				{#if env.plexToken}<p class="mt-1 text-xs text-amber-400">Set from environment</p>{/if}
+				{#if env.plexToken}<p class="mt-1 text-xs text-amber-400">
+						{m.settings_set_from_env()}
+					</p>{/if}
 			</div>
 		</div>
 	{:else if serverType === 'jellyfin'}
 		<div class="surface space-y-4 p-4">
 			<div>
-				<label for="jellyfinUrl" class="mb-1 block text-sm font-medium">Jellyfin URL</label>
+				<label for="jellyfinUrl" class="mb-1 block text-sm font-medium"
+					>{m.settings_jellyfin_url()}</label
+				>
 				<input
 					id="jellyfinUrl"
 					bind:value={jellyfinUrl}
@@ -337,27 +371,33 @@
 					placeholder="http://192.168.1.10:8096"
 					class="input w-full disabled:opacity-50"
 				/>
-				{#if env.jellyfinUrl}<p class="mt-1 text-xs text-amber-400">Set from environment</p>{/if}
+				{#if env.jellyfinUrl}<p class="mt-1 text-xs text-amber-400">
+						{m.settings_set_from_env()}
+					</p>{/if}
 			</div>
 			<div>
-				<label for="jellyfinApiKey" class="mb-1 block text-sm font-medium">Jellyfin API key</label>
+				<label for="jellyfinApiKey" class="mb-1 block text-sm font-medium"
+					>{m.settings_jellyfin_api_key()}</label
+				>
 				<input
 					id="jellyfinApiKey"
 					type="password"
 					bind:value={jellyfinApiKey}
 					disabled={env.jellyfinApiKey}
 					placeholder={data.config.jellyfinApiKeySet
-						? '•••••••• (set — leave blank to keep)'
-						: 'API key (Dashboard → API Keys)'}
+						? m.settings_secret_placeholder_set()
+						: m.settings_jellyfin_api_key_placeholder_unset()}
 					class="input w-full disabled:opacity-50"
 				/>
-				{#if env.jellyfinApiKey}<p class="mt-1 text-xs text-amber-400">Set from environment</p>{/if}
+				{#if env.jellyfinApiKey}<p class="mt-1 text-xs text-amber-400">
+						{m.settings_set_from_env()}
+					</p>{/if}
 			</div>
 		</div>
 	{:else}
 		<div class="surface space-y-4 p-4">
 			<div>
-				<label for="embyUrl" class="mb-1 block text-sm font-medium">Emby URL</label>
+				<label for="embyUrl" class="mb-1 block text-sm font-medium">{m.settings_emby_url()}</label>
 				<input
 					id="embyUrl"
 					bind:value={embyUrl}
@@ -365,43 +405,47 @@
 					placeholder="http://192.168.1.10:8096"
 					class="input w-full disabled:opacity-50"
 				/>
-				{#if env.embyUrl}<p class="mt-1 text-xs text-amber-400">Set from environment</p>{/if}
+				{#if env.embyUrl}<p class="mt-1 text-xs text-amber-400">{m.settings_set_from_env()}</p>{/if}
 			</div>
 			<div>
-				<label for="embyApiKey" class="mb-1 block text-sm font-medium">Emby API key</label>
+				<label for="embyApiKey" class="mb-1 block text-sm font-medium"
+					>{m.settings_emby_api_key()}</label
+				>
 				<input
 					id="embyApiKey"
 					type="password"
 					bind:value={embyApiKey}
 					disabled={env.embyApiKey}
 					placeholder={data.config.embyApiKeySet
-						? '•••••••• (set — leave blank to keep)'
-						: 'API key (Settings → API Keys)'}
+						? m.settings_secret_placeholder_set()
+						: m.settings_emby_api_key_placeholder_unset()}
 					class="input w-full disabled:opacity-50"
 				/>
-				{#if env.embyApiKey}<p class="mt-1 text-xs text-amber-400">Set from environment</p>{/if}
+				{#if env.embyApiKey}<p class="mt-1 text-xs text-amber-400">
+						{m.settings_set_from_env()}
+					</p>{/if}
 			</div>
 		</div>
 	{/if}
 
 	<div>
-		<label for="tmdbKey" class="mb-1 block text-sm font-medium">TMDB key (v3 key or v4 JWT)</label>
+		<label for="tmdbKey" class="mb-1 block text-sm font-medium">{m.settings_tmdb_key()}</label>
 		<input
 			id="tmdbKey"
 			type="password"
 			bind:value={tmdbKey}
 			disabled={env.tmdbKey}
 			placeholder={data.config.tmdbKeySet
-				? '•••••••• (set — leave blank to keep)'
-				: 'TMDB credential'}
+				? m.settings_secret_placeholder_set()
+				: m.settings_tmdb_key_placeholder_unset()}
 			class="input w-full disabled:opacity-50"
 		/>
-		{#if env.tmdbKey}<p class="mt-1 text-xs text-amber-400">Set from environment</p>{/if}
+		{#if env.tmdbKey}<p class="mt-1 text-xs text-amber-400">{m.settings_set_from_env()}</p>{/if}
 	</div>
 
 	<div>
 		<label for="kometaAssetsDir" class="mb-1 block text-sm font-medium"
-			>Kometa assets directory</label
+			>{m.settings_kometa_dir()}</label
 		>
 		<input
 			id="kometaAssetsDir"
@@ -410,39 +454,40 @@
 			class="input w-full disabled:opacity-50"
 		/>
 		<p class="mt-1 text-xs text-neutral-500">
-			Kometa export targets Plex/PMM; optional for Jellyfin/Emby.
+			{m.settings_kometa_dir_hint()}
 		</p>
 	</div>
 
 	<div class="grid grid-cols-3 gap-3">
 		<div>
-			<label for="delay" class="mb-1 block text-sm font-medium">Delay (ms)</label>
+			<label for="delay" class="mb-1 block text-sm font-medium">{m.settings_delay()}</label>
 			<input id="delay" bind:value={mediuxDelayMs} class="input w-full" />
 		</div>
 		<div>
-			<label for="conc" class="mb-1 block text-sm font-medium">Concurrency</label>
+			<label for="conc" class="mb-1 block text-sm font-medium">{m.settings_concurrency()}</label>
 			<input id="conc" bind:value={mediuxConcurrency} class="input w-full" />
 		</div>
 		<div>
-			<label for="ttl" class="mb-1 block text-sm font-medium">Cache (days)</label>
+			<label for="ttl" class="mb-1 block text-sm font-medium">{m.settings_cache_days()}</label>
 			<input id="ttl" bind:value={httpCacheTtlDays} class="input w-full" />
 		</div>
 	</div>
 
 	<div>
-		<label for="method" class="mb-1 block text-sm font-medium">Default apply method</label>
+		<label for="method" class="mb-1 block text-sm font-medium"
+			>{m.settings_default_apply_method()}</label
+		>
 		<select id="method" bind:value={defaultApplyMethod} class="input">
-			<option value="both">{serverLabel} + Kometa</option>
-			<option value="plex">{serverLabel} only</option>
-			<option value="kometa">Kometa only</option>
+			<option value="both">{m.settings_method_both({ server: serverLabel })}</option>
+			<option value="plex">{m.settings_method_server_only({ server: serverLabel })}</option>
+			<option value="kometa">{m.settings_method_kometa_only()}</option>
 		</select>
 	</div>
 
 	<div>
-		<span class="mb-1 block text-sm font-medium">Artwork providers</span>
+		<span class="mb-1 block text-sm font-medium">{m.settings_providers()}</span>
 		<p class="mb-2 text-xs text-neutral-500">
-			Sources searched when finding covers. MediUX and TMDB need no key; Fanart.tv needs a key;
-			ThePosterDB is experimental.
+			{m.settings_providers_hint()}
 		</p>
 		<div class="space-y-1">
 			<label class="flex items-center gap-2 text-sm text-neutral-300">
@@ -450,21 +495,24 @@
 					type="checkbox"
 					bind:checked={providerMediux}
 					disabled={data.config.envManaged.providerMediux}
-				/> MediUX
+				/>
+				{m.settings_provider_mediux()}
 			</label>
 			<label class="flex items-center gap-2 text-sm text-neutral-300">
 				<input
 					type="checkbox"
 					bind:checked={providerTmdb}
 					disabled={data.config.envManaged.providerTmdb}
-				/> TMDB artwork
+				/>
+				{m.settings_provider_tmdb()}
 			</label>
 			<label class="flex items-center gap-2 text-sm text-neutral-300">
 				<input
 					type="checkbox"
 					bind:checked={providerFanart}
 					disabled={data.config.envManaged.providerFanart}
-				/> Fanart.tv
+				/>
+				{m.settings_provider_fanart()}
 			</label>
 			<label class="flex items-center gap-2 text-sm text-neutral-300">
 				<input
@@ -472,37 +520,38 @@
 					bind:checked={providerThePosterDb}
 					disabled={data.config.envManaged.providerThePosterDb}
 				/>
-				ThePosterDB <span class="text-xs text-neutral-500">(experimental)</span>
+				{m.settings_provider_theposterdb()}
+				<span class="text-xs text-neutral-500">{m.settings_experimental()}</span>
 			</label>
 		</div>
 		<div class="mt-3">
-			<label for="fanartKey" class="mb-1 block text-sm font-medium">Fanart.tv API key</label>
+			<label for="fanartKey" class="mb-1 block text-sm font-medium">{m.settings_fanart_key()}</label
+			>
 			<input
 				id="fanartKey"
 				type="password"
 				bind:value={fanartKey}
 				disabled={data.config.envManaged.fanartKey}
 				placeholder={data.config.fanartKeySet
-					? '•••••••• (set — leave blank to keep)'
-					: 'Fanart.tv personal API key'}
+					? m.settings_secret_placeholder_set()
+					: m.settings_fanart_key_placeholder_unset()}
 				class="input w-full disabled:opacity-50"
 			/>
 			{#if data.config.envManaged.fanartKey}<p class="mt-1 text-xs text-amber-400">
-					Set from environment
+					{m.settings_set_from_env()}
 				</p>{/if}
 		</div>
 	</div>
 
 	<div>
-		<span class="mb-1 block text-sm font-medium">Libraries to sync</span>
+		<span class="mb-1 block text-sm font-medium">{m.settings_libraries_to_sync()}</span>
 		{#if data.sections.length === 0}
 			<p class="text-xs text-neutral-500">
-				Connect your media server and save, then reload to choose libraries.
+				{m.settings_libraries_connect_first()}
 			</p>
 		{:else}
 			<p class="mb-2 text-xs text-neutral-500">
-				Uncheck libraries you don't want synced (e.g. a YouTube collection). All checked syncs
-				everything.
+				{m.settings_libraries_hint()}
 			</p>
 			<div class="space-y-1">
 				{#each data.sections as section (section.key)}
@@ -522,18 +571,26 @@
 
 	<div class="flex items-center gap-3 pt-2">
 		<button onclick={save} disabled={saving} class="btn btn-accent px-4 py-2"
-			>{saving ? 'Saving…' : 'Save'}</button
+			>{saving ? m.settings_saving() : m.settings_save()}</button
 		>
 		<button onclick={test} disabled={testing} class="btn btn-subtle px-4 py-2"
-			>{testing ? 'Testing…' : 'Test connections'}</button
+			>{testing ? m.settings_testing() : m.settings_test_connections()}</button
 		>
-		{#if saved}<span class="text-sm text-emerald-400">Saved</span>{/if}
+		{#if saved}<span class="text-sm text-emerald-400">{m.settings_saved()}</span>{/if}
 	</div>
 
 	{#if testResult}
 		<div class="surface space-y-1 p-3 text-sm">
-			<p>{serverLabel}: {testResult.plex.ok ? '✅ connected' : `❌ ${testResult.plex.error}`}</p>
-			<p>TMDB: {testResult.tmdb.ok ? '✅ connected' : `❌ ${testResult.tmdb.error}`}</p>
+			<p>
+				{serverLabel}: {testResult.plex.ok
+					? m.settings_test_result_ok()
+					: m.settings_test_result_fail({ error: testResult.plex.error ?? '' })}
+			</p>
+			<p>
+				TMDB: {testResult.tmdb.ok
+					? m.settings_test_result_ok()
+					: m.settings_test_result_fail({ error: testResult.tmdb.error ?? '' })}
+			</p>
 		</div>
 	{/if}
 </div>

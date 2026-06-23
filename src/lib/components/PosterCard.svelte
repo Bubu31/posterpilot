@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { MediaItem } from '$lib/server/db/schema';
+	import { m } from '$lib/paraglide/messages';
 
 	let {
 		item,
@@ -28,7 +29,7 @@
 				/>
 			{:else}
 				<div class="flex h-full items-center justify-center text-xs text-neutral-600">
-					No poster
+					{m.poster_no_poster()}
 				</div>
 			{/if}
 		</div>
@@ -44,8 +45,9 @@
 
 	<!-- Status badges -->
 	<div class="pointer-events-none absolute top-2 left-2 flex gap-1">
-		{#if item.hasMediux}<span class="badge badge-mediux">MediUX</span>{/if}
-		{#if item.selectedPosterUrl}<span class="badge badge-changed">✓ changed</span>{/if}
+		{#if item.hasMediux}<span class="badge badge-mediux">{m.library_filter_mediux()}</span>{/if}
+		{#if item.selectedPosterUrl}<span class="badge badge-changed">{m.poster_badge_changed()}</span
+			>{/if}
 	</div>
 
 	<!-- Rating -->
@@ -59,7 +61,7 @@
 		<button
 			type="button"
 			onclick={onToggle}
-			aria-label={selected ? 'Deselect' : 'Select'}
+			aria-label={selected ? m.poster_deselect() : m.poster_select()}
 			class="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded border text-xs font-bold transition {selected
 				? 'border-accent-400 bg-accent-500 text-white'
 				: 'border-neutral-600 bg-neutral-900/80 text-transparent opacity-0 group-hover:opacity-100 hover:border-neutral-400'}"

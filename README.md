@@ -4,6 +4,7 @@
 [![Release](https://img.shields.io/github/v/release/diegopeixoto/posterpilot?sort=semver)](https://github.com/diegopeixoto/posterpilot/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Container](https://img.shields.io/badge/ghcr.io-posterpilot-2496ED?logo=docker&logoColor=white)](https://github.com/diegopeixoto/posterpilot/pkgs/container/posterpilot)
+[![Translation status](https://hosted.weblate.org/widget/posterpilot/svg-badge.svg)](https://hosted.weblate.org/engage/posterpilot/)
 
 Self-hosted web app to browse a Plex library, find artwork covers on
 [mediux.pro](https://mediux.pro), and apply the chosen cover to Plex — directly
@@ -126,6 +127,26 @@ health probe (the bundled `docker-compose.yml` already does):
 ```sh
 curl -s http://localhost:3000/api/health
 ```
+
+## Translating
+
+The UI is localized into English (default), Spanish, Simplified Chinese,
+Japanese, and Brazilian Portuguese, with per-key English fallback so an
+untranslated string always shows readable English, never a raw key. The active
+language is resolved per request from your persisted preference (set via the
+header switcher or Settings), then your browser's `Accept-Language`, then
+English.
+
+[![Translation status](https://hosted.weblate.org/widget/posterpilot/multi-auto.svg)](https://hosted.weblate.org/engage/posterpilot/)
+
+Translations live as one JSON catalog per locale under `messages/` (e.g.
+`messages/es.json`), with `messages/en.json` as the complete source. They are
+managed through [Weblate](https://hosted.weblate.org/engage/posterpilot/) — join
+the project to translate in your browser; completed strings land back in the repo
+via git. New English strings added to `en.json` automatically appear as
+untranslated entries for every language. You can also edit a catalog directly and
+open a PR. See [CONTRIBUTING.md](CONTRIBUTING.md#translators) for the full
+workflow.
 
 ## Contributing
 

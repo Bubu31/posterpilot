@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import PosterCard from '$lib/components/PosterCard.svelte';
 	import JobProgress from '$lib/components/JobProgress.svelte';
+	import { m } from '$lib/paraglide/messages';
 
 	let { data } = $props();
 
@@ -31,8 +32,8 @@
 </script>
 
 <div class="flex items-center justify-between">
-	<h1 class="text-2xl font-semibold tracking-tight">Library</h1>
-	<span class="text-sm text-neutral-500">{data.items.length} items</span>
+	<h1 class="text-2xl font-semibold tracking-tight">{m.library_title()}</h1>
+	<span class="text-sm text-neutral-500">{m.library_item_count({ count: data.items.length })}</span>
 </div>
 
 <!-- Spotlight -->
@@ -48,7 +49,7 @@
 		/>
 		<div class="absolute inset-0 bg-gradient-to-r from-neutral-950/90 to-transparent"></div>
 		<div class="absolute bottom-4 left-5">
-			<p class="text-xs tracking-wide text-accent-300 uppercase">Recently updated</p>
+			<p class="text-xs tracking-wide text-accent-300 uppercase">{m.library_recently_updated()}</p>
 			<p class="text-lg font-semibold text-white">{data.spotlight.title}</p>
 			<p class="text-xs text-neutral-300">{data.spotlight.year ?? ''}</p>
 		</div>
@@ -57,63 +58,71 @@
 
 <!-- Filters -->
 <form method="get" class="surface mt-4 flex flex-wrap items-center gap-2 p-3 text-sm">
-	<input name="q" value={data.filter.q ?? ''} placeholder="Search title…" class="input w-44" />
+	<input
+		name="q"
+		value={data.filter.q ?? ''}
+		placeholder={m.library_search_placeholder()}
+		class="input w-44"
+	/>
 	<select name="type" value={data.filter.type ?? ''} class="input">
-		<option value="">All types</option>
-		<option value="movie">Movies</option>
-		<option value="show">Shows</option>
+		<option value="">{m.library_all_types()}</option>
+		<option value="movie">{m.library_type_movies()}</option>
+		<option value="show">{m.library_type_shows()}</option>
 	</select>
 	<select name="sort" value={data.filter.sort ?? 'title'} class="input">
-		<option value="title">Title A→Z</option>
-		<option value="rating">Rating ↓</option>
-		<option value="year">Year ↓</option>
-		<option value="runtime">Runtime ↓</option>
-		<option value="recent">Recently changed</option>
+		<option value="title">{m.library_sort_title()}</option>
+		<option value="rating">{m.library_sort_rating()}</option>
+		<option value="year">{m.library_sort_year()}</option>
+		<option value="runtime">{m.library_sort_runtime()}</option>
+		<option value="recent">{m.library_sort_recent()}</option>
 	</select>
 	<select name="minRating" value={data.filter.minRating?.toString() ?? ''} class="input">
-		<option value="">Any rating</option>
-		<option value="6">★ 6+</option>
-		<option value="7">★ 7+</option>
-		<option value="8">★ 8+</option>
-		<option value="9">★ 9+</option>
+		<option value="">{m.library_any_rating()}</option>
+		<option value="6">{m.library_rating_6()}</option>
+		<option value="7">{m.library_rating_7()}</option>
+		<option value="8">{m.library_rating_8()}</option>
+		<option value="9">{m.library_rating_9()}</option>
 	</select>
 	{#if data.genres.length}
 		<select name="genre" value={data.filter.genre ?? ''} class="input">
-			<option value="">All genres</option>
+			<option value="">{m.library_all_genres()}</option>
 			{#each data.genres as g (g)}<option value={g}>{g}</option>{/each}
 		</select>
 	{/if}
 	<label class="flex items-center gap-1.5 text-neutral-400">
-		<input type="checkbox" name="mediux" value="1" checked={data.filter.hasMediux} /> MediUX
+		<input type="checkbox" name="mediux" value="1" checked={data.filter.hasMediux} />
+		{m.library_filter_mediux()}
 	</label>
 	<label class="flex items-center gap-1.5 text-neutral-400">
-		<input type="checkbox" name="missing" value="1" checked={data.filter.missingPoster} /> missing
+		<input type="checkbox" name="missing" value="1" checked={data.filter.missingPoster} />
+		{m.library_filter_missing()}
 	</label>
 	<label class="flex items-center gap-1.5 text-neutral-400">
-		<input type="checkbox" name="unchanged" value="1" checked={data.filter.unchanged} /> unchanged
+		<input type="checkbox" name="unchanged" value="1" checked={data.filter.unchanged} />
+		{m.library_filter_unchanged()}
 	</label>
-	<button class="btn btn-subtle">Apply</button>
+	<button class="btn btn-subtle">{m.library_apply_filters()}</button>
 </form>
 
 {#if selected.size > 0}
 	<div
 		class="surface sticky top-16 z-10 mt-4 flex flex-wrap items-center gap-3 border-accent-800 bg-accent-950/40 px-4 py-2 text-sm backdrop-blur"
 	>
-		<span class="font-medium">{selected.size} selected</span>
+		<span class="font-medium">{m.library_selected_count({ count: selected.size })}</span>
 		<button onclick={() => bulk('/api/discover')} class="btn btn-subtle px-3 py-1"
-			>Find covers</button
+			>{m.library_find_covers()}</button
 		>
 		<select bind:value={method} class="input py-1">
-			<option value="both">Plex + Kometa</option>
-			<option value="plex">Plex only</option>
-			<option value="kometa">Kometa only</option>
+			<option value="both">{m.library_method_both()}</option>
+			<option value="plex">{m.library_method_plex()}</option>
+			<option value="kometa">{m.library_method_kometa()}</option>
 		</select>
 		<button
 			onclick={() => bulk('/api/apply', { method, selection: 'auto' })}
-			class="btn btn-accent px-3 py-1">Apply (auto)</button
+			class="btn btn-accent px-3 py-1">{m.library_apply_auto()}</button
 		>
 		<button onclick={clearSelection} class="ml-auto text-neutral-400 hover:text-neutral-200"
-			>Clear</button
+			>{m.library_clear()}</button
 		>
 	</div>
 {/if}
@@ -124,7 +133,7 @@
 
 {#if data.items.length === 0}
 	<div class="surface mt-10 p-10 text-center text-neutral-500">
-		No items. Configure Plex in Settings and run a sync from the Dashboard.
+		{m.library_empty()}
 	</div>
 {:else}
 	<div

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import JobProgress from '$lib/components/JobProgress.svelte';
+	import { m } from '$lib/paraglide/messages';
 
 	let { data } = $props();
 
@@ -17,12 +18,12 @@
 	});
 
 	const cards = $derived([
-		{ label: 'Items', value: data.stats.total },
-		{ label: 'Movies', value: data.stats.movies },
-		{ label: 'Shows', value: data.stats.shows },
-		{ label: 'Resolved', value: data.stats.resolved },
-		{ label: 'With MediaUX', value: data.stats.withMediux },
-		{ label: 'Applied', value: data.stats.appliedCount }
+		{ label: m.dashboard_stat_items(), value: data.stats.total },
+		{ label: m.dashboard_stat_movies(), value: data.stats.movies },
+		{ label: m.dashboard_stat_shows(), value: data.stats.shows },
+		{ label: m.dashboard_stat_resolved(), value: data.stats.resolved },
+		{ label: m.dashboard_stat_with_mediux(), value: data.stats.withMediux },
+		{ label: m.dashboard_stat_applied(), value: data.stats.appliedCount }
 	]);
 
 	async function sync() {
@@ -39,9 +40,9 @@
 </script>
 
 <div class="flex items-center justify-between">
-	<h1 class="text-2xl font-semibold tracking-tight">Dashboard</h1>
+	<h1 class="text-2xl font-semibold tracking-tight">{m.dashboard_title()}</h1>
 	<button onclick={sync} disabled={busy} class="btn btn-accent px-4 py-2">
-		{busy ? 'Starting…' : 'Sync library'}
+		{busy ? m.dashboard_sync_starting() : m.dashboard_sync()}
 	</button>
 </div>
 
@@ -66,10 +67,10 @@
 	{/each}
 </div>
 
-<h2 class="section-title mt-8">Recent jobs</h2>
+<h2 class="section-title mt-8">{m.dashboard_recent_jobs()}</h2>
 <div class="surface overflow-hidden">
 	{#if data.jobs.length === 0}
-		<p class="p-4 text-sm text-neutral-500">No jobs yet. Run a sync to populate your library.</p>
+		<p class="p-4 text-sm text-neutral-500">{m.dashboard_no_jobs()}</p>
 	{:else}
 		<table class="w-full text-sm">
 			<tbody>

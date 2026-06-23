@@ -89,3 +89,14 @@ Rollback: remove the Vite plugin + `handle` hook, the language switcher/field, a
 - Whether the header switcher should immediately re-render via `setLocale` (no reload) or trigger a navigation/invalidate to re-fetch SSR strings — prefer client `setLocale` for snappiness, confirm it keeps SSR and persisted setting consistent.
 - Whether to treat `zh` as `zh` or `zh-Hans` for the catalog/locale id (Simplified) — default to `zh` for brevity, revisit if Traditional Chinese is ever added.
 - Whether Brazilian Portuguese should fall back to a generic `pt` before English if a `pt` catalog is ever added — out of scope now (only `pt-BR` exists), but keep the resolver tolerant of regioned tags.
+
+## Implementation notes (as built)
+
+Paraglide JS (`@inlang/paraglide-js` 2.x) set up cleanly under Bun + Vite 8, so the **in-house fallback was not needed**. A few specifics differ from the plan and are recorded here so the docs match the code:
+
+- **Locale env var is `LANGUAGE`** (`ENV_MAP.language = 'LANGUAGE'`), not `APP_LANGUAGE` — kept consistent with the existing un-prefixed env names (`PLEX_URL`, `TMDB_KEY`, …). It still flows through `resolveConfig`/`isEnvManaged` like every other setting, so the env locks the locale and shows as env-managed.
+- **Resolution strategy** is Paraglide `['custom-setting', 'preferredLanguage', 'baseLocale']`. `custom-setting` is a custom strategy registered on both server and client: the server handler reads the persisted/validated `language` from `resolveConfig()` (highest precedence); `preferredLanguage` is Paraglide's `Accept-Language` matcher; `baseLocale` is English. A pure, `$env`/`$app`-free `resolveLocale(setting, acceptLanguage)` in `src/lib/i18n/resolve.ts` mirrors this precedence and is unit-tested (`resolve.test.ts`); `resolveConfig` reuses its `normalizeLocale` to validate/normalize the `language` value (tolerant of regioned tags: `pt`→`pt-BR`, `zh-Hans`→`zh`), treating unsupported values as unset.
+- **Switcher behavior**: the header switcher and the Settings language field both call Paraglide `setLocale(locale)`. The client `custom-setting` strategy persists the choice via `POST /api/settings { language }` (the same write the Settings page uses), and Paraglide then reloads so the next SSR pass re-renders in the new locale — keeping SSR, the persisted setting, and the client in sync (one source of truth).
+- **`<html lang>`** is set per request via the `handle` hook's `transformPageChunk` replacing a `%lang%` placeholder in `app.html` with the resolved locale.
+- **Generated output** lives at `src/lib/paraglide/` (git-ignored), compiled by the Vite plugin; components import `m` from `$lib/paraglide/messages` and the runtime from `$lib/paraglide/runtime`.
+- **Weblate** is documented and pre-configured (`.weblate`, README badge + "Translating" section, CONTRIBUTING "Translators" section), but creating the live Hosted Weblate project/component remains an out-of-band maintainer step.

@@ -1,0 +1,21 @@
+# Weblate configuration for the `wlc` CLI and as the source of truth for the
+# Hosted Weblate component. Creating the actual project/component on
+# hosted.weblate.org is an out-of-band maintainer step; this file documents the
+# intended mapping so it is version-controlled and reproducible.
+#
+# Component settings (mirror these when creating the component on Weblate):
+#   File format:      JSON file (key-value, i18next-compatible flat keys)
+#   File mask:        messages/*.json
+#   Monolingual base: messages/en.json   (English is the source language)
+#   Source language:  en
+#   Translation langs: es, zh, ja, pt-BR
+#   Repository:       this git repo; Weblate pushes translations back via git.
+
+[weblate]
+url = https://hosted.weblate.org/api/
+
+[component "posterpilot/ui"]
+filemask = messages/*.json
+template = messages/en.json
+file_format = json
+source_language = en

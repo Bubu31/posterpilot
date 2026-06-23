@@ -3,7 +3,10 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		// interface Locals {}
+		interface Locals {
+			/** Active UI locale resolved per request by the Paraglide handle hook. */
+			locale: import('$lib/i18n/resolve').Locale;
+		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}

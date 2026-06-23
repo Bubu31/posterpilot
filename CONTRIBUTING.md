@@ -55,11 +55,36 @@ Larger features are planned with [OpenSpec](https://github.com/Fission-AI/OpenSp
 under `openspec/changes/`. For a substantial change, propose a spec first
 (`openspec`), then implement against its tasks.
 
-## Translations
+## Translators
 
-Help translate the UI! Translation catalogs live in `messages/<locale>.json` and
-are managed through Weblate — see [docs on translating](README.md#translating).
-You can also edit the catalogs directly and open a PR.
+Help translate the UI into your language! No coding required.
+
+**Source of truth.** Every user-facing string lives in a per-locale JSON catalog
+under `messages/` — one file per language (`messages/en.json`, `es.json`,
+`zh.json`, `ja.json`, `pt-BR.json`), keyed by a stable message id. English
+(`messages/en.json`) is the complete **source** catalog; the others hold
+translations and may be partial. Any id missing or left empty in a target locale
+falls back to its English text, so a partial translation never shows a raw key.
+
+**Via Weblate (recommended).** Translations are managed through
+[Weblate](https://hosted.weblate.org/engage/posterpilot/), a libre web translation
+platform:
+
+1. Open the [PosterPilot project on Weblate](https://hosted.weblate.org/engage/posterpilot/)
+   and sign in (a free account works).
+2. Pick your language and translate the untranslated strings in the browser.
+3. Weblate proposes the changes back to this repository as commits/PRs over git —
+   a maintainer merges them. New English strings added to `en.json` automatically
+   surface as untranslated entries for every language.
+
+**Via a direct PR.** You can also edit a catalog by hand: copy a new key from
+`messages/en.json` into `messages/<locale>.json`, translate the value, and open a
+PR. Keep keys identical to the source; only translate the values. Leave technical
+proper nouns (Plex, MediUX, TMDB, Kometa, Fanart.tv) untranslated.
+
+The Weblate component is configured against `messages/*.json` with `en` as the
+source language and JSON (key-value) format; the README shows a per-language
+translation-status badge.
 
 By contributing, you agree your contributions are licensed under the project's
 [MIT license](LICENSE).

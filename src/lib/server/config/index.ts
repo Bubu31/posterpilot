@@ -2,6 +2,7 @@ import { eq, inArray } from 'drizzle-orm';
 import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { settings } from '$lib/server/db/schema';
+import { normalizeLocale } from '$lib/i18n/resolve';
 
 export type ApplyMethod = 'plex' | 'kometa' | 'both';
 
@@ -35,6 +36,12 @@ export interface AppConfig {
 	providerThePosterDb: boolean;
 	/** Fanart.tv API key (the only keyed provider); null when unset. */
 	fanartKey: string | null;
+	/**
+	 * Preferred UI locale (one of the supported locales) or null when unset.
+	 * Highest-precedence input to UI locale resolution; null falls back to the
+	 * request's Accept-Language, then English.
+	 */
+	language: string | null;
 }
 
 /** Config keys that are secrets — never returned to the client, redacted in logs. */
@@ -68,7 +75,8 @@ const ENV_MAP: Record<ConfigKey, string> = {
 	providerTmdb: 'PROVIDER_TMDB',
 	providerFanart: 'PROVIDER_FANART',
 	providerThePosterDb: 'PROVIDER_THEPOSTERDB',
-	fanartKey: 'FANART_KEY'
+	fanartKey: 'FANART_KEY',
+	language: 'LANGUAGE'
 };
 
 const DEFAULTS = {
@@ -84,6 +92,8 @@ const DEFAULTS = {
 	providerTmdb: true,
 	providerFanart: false,
 	providerThePosterDb: false
+	// `language` has no default: when unset the UI locale resolver falls through
+	// to the request's Accept-Language header, then English.
 };
 
 /** Persisted-settings keys that the UI is allowed to write. */
@@ -107,7 +117,8 @@ export const WRITABLE_KEYS: ConfigKey[] = [
 	'providerTmdb',
 	'providerFanart',
 	'providerThePosterDb',
-	'fanartKey'
+	'fanartKey',
+	'language'
 ];
 
 async function loadSettings(): Promise<Record<string, string>> {
@@ -189,7 +200,10 @@ export async function resolveConfig(): Promise<AppConfig> {
 			rawValue('providerThePosterDb', persisted),
 			DEFAULTS.providerThePosterDb
 		),
-		fanartKey: rawValue('fanartKey', persisted) ?? null
+		fanartKey: rawValue('fanartKey', persisted) ?? null,
+		// Validate against the supported locales; an absent/unsupported value is
+		// treated as unset (null) so resolution falls through to Accept-Language.
+		language: normalizeLocale(rawValue('language', persisted))
 	};
 }
 
@@ -284,6 +298,8 @@ export interface PublicConfig {
 	providerFanart: boolean;
 	providerThePosterDb: boolean;
 	fanartKeySet: boolean;
+	/** Preferred UI locale (one of the supported locales) or null when unset. */
+	language: string | null;
 	envManaged: Partial<Record<ConfigKey, boolean>>;
 }
 
@@ -311,6 +327,7 @@ export async function publicConfig(): Promise<PublicConfig> {
 		providerFanart: c.providerFanart,
 		providerThePosterDb: c.providerThePosterDb,
 		fanartKeySet: c.fanartKey !== null,
+		language: c.language,
 		envManaged
 	};
 }

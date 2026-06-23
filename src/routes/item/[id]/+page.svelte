@@ -2,6 +2,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { PosterCandidate } from '$lib/server/db/schema';
 	import type { CandidateSet } from '$lib/server/posters/sets';
+	import { m } from '$lib/paraglide/messages';
 
 	let { data } = $props();
 
@@ -35,14 +36,19 @@
 		return h ? `${h}h ${m}m` : `${m}m`;
 	}
 
+	// Locale-aware rating number (e.g. 8,5 in pt-BR / es).
+	const ratingFmt = $derived(
+		new Intl.NumberFormat(data.locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+	);
+
 	const metaBits = $derived(
 		[
-			data.item.rating ? `★ ${data.item.rating.toFixed(1)}` : null,
+			data.item.rating ? `★ ${ratingFmt.format(data.item.rating)}` : null,
 			data.item.year?.toString() ?? null,
 			isShow
 				? [
-						data.item.seasonCount ? `${data.item.seasonCount} seasons` : null,
-						data.item.episodeCount ? `${data.item.episodeCount} episodes` : null
+						data.item.seasonCount ? m.item_seasons({ count: data.item.seasonCount }) : null,
+						data.item.episodeCount ? m.item_episodes({ count: data.item.episodeCount }) : null
 					]
 						.filter(Boolean)
 						.join(' · ') || null
@@ -93,7 +99,7 @@
 		if (poster) selectedPoster = poster.url;
 		if (backdrop) selectedBackground = backdrop.url;
 		await persistSelection();
-		message = 'Set staged — review below, then Apply.';
+		message = m.item_msg_set_staged();
 	}
 
 	async function useCustomUrl(which: 'poster' | 'background') {
@@ -112,8 +118,10 @@
 			const result = await res.json();
 			message =
 				!res.ok || result.error
-					? `Discovery failed: ${result.error ?? res.status}`
-					: `Found ${result.count} cover${result.count === 1 ? '' : 's'}.`;
+					? m.item_msg_discovery_failed({ error: result.error ?? res.status })
+					: result.count === 1
+						? m.item_msg_found_cover_one({ count: result.count })
+						: m.item_msg_found_covers({ count: result.count });
 			await invalidateAll();
 		} finally {
 			busy = false;
@@ -130,8 +138,8 @@
 			const res = await fetch(`/api/items/${data.item.id}/upload`, { method: 'POST', body: fd });
 			const result = await res.json();
 			message = result.ok
-				? 'Poster uploaded to Plex.'
-				: `Upload failed: ${result.error ?? res.status}`;
+				? m.item_msg_uploaded()
+				: m.item_msg_upload_failed({ error: result.error ?? res.status });
 			await invalidateAll();
 		} finally {
 			busy = false;
@@ -145,8 +153,8 @@
 			const res = await fetch(`/api/items/${data.item.id}/revert`, { method: 'POST' });
 			const result = await res.json();
 			message = result.ok
-				? 'Reverted to the original Plex poster.'
-				: `Revert failed: ${result.error ?? res.status}`;
+				? m.item_msg_reverted()
+				: m.item_msg_revert_failed({ error: result.error ?? res.status });
 			selectedPoster = null;
 			selectedBackground = null;
 			await invalidateAll();
@@ -157,7 +165,7 @@
 
 	async function apply() {
 		if (!selectedPoster) {
-			message = 'Stage a poster first.';
+			message = m.item_msg_stage_first();
 			return;
 		}
 		busy = true;
@@ -210,7 +218,9 @@
 	</button>
 {/snippet}
 
-<a href="/library" class="text-sm text-neutral-400 hover:text-neutral-200">← Library</a>
+<a href="/library" class="text-sm text-neutral-400 hover:text-neutral-200"
+	>{m.item_back_to_library()}</a
+>
 
 <!-- Hero -->
 <section class="relative mt-3 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-950">
@@ -229,7 +239,9 @@
 			{#if data.item.currentPosterUrl}
 				<img src={data.item.currentPosterUrl} alt={data.item.title} class="w-full" />
 			{:else}
-				<div class="flex aspect-[2/3] items-center justify-center text-neutral-600">No poster</div>
+				<div class="flex aspect-[2/3] items-center justify-center text-neutral-600">
+					{m.item_no_poster()}
+				</div>
 			{/if}
 		</div>
 
@@ -269,18 +281,16 @@
 
 			<div class="mt-4 flex flex-wrap items-center gap-2">
 				<button onclick={discover} disabled={busy || !data.item.resolved} class="btn btn-subtle">
-					{busy ? 'Working…' : 'Find covers'}
+					{busy ? m.item_working() : m.item_find_covers()}
 				</button>
 				{#if data.history.length}
-					<button onclick={revert} disabled={busy} class="btn btn-ghost"
-						>Revert to Plex original</button
-					>
+					<button onclick={revert} disabled={busy} class="btn btn-ghost">{m.item_revert()}</button>
 				{/if}
 			</div>
 
 			{#if !enriched}
 				<p class="mt-3 text-xs text-neutral-500">
-					No TMDB metadata yet — re-sync the library to enrich this item.
+					{m.item_no_metadata()}
 				</p>
 			{/if}
 		</div>
@@ -289,7 +299,7 @@
 
 {#if data.item.cast?.length}
 	<section class="mt-6">
-		<h2 class="section-title">Cast</h2>
+		<h2 class="section-title">{m.item_cast()}</h2>
 		<div class="flex gap-4 overflow-x-auto pb-2">
 			{#each data.item.cast as person (person.name)}
 				<div class="w-20 flex-none text-center">
@@ -325,9 +335,12 @@
 	<section class="mt-8 space-y-6 pb-32">
 		{#each data.providerGroups as group (group.provider)}
 			<h2 class="section-title">
-				{providerLabel(group.provider)} · {group.sets.length} set{group.sets.length === 1
-					? ''
-					: 's'}
+				{group.sets.length === 1
+					? m.item_set_count_one({
+							provider: providerLabel(group.provider),
+							count: group.sets.length
+						})
+					: m.item_set_count({ provider: providerLabel(group.provider), count: group.sets.length })}
 			</h2>
 			{#each group.sets as set (set.setId)}
 				{@const posters = setKinds(set, 'poster')}
@@ -337,12 +350,14 @@
 				<div class="surface p-4">
 					<div class="mb-3 flex items-center justify-between">
 						<p class="text-sm text-neutral-300">
-							{#if set.author}by <span class="font-semibold text-neutral-100">{set.author}</span
-								>{:else}<span class="text-neutral-500">Unattributed set</span>{/if}
+							{#if set.author}{m.item_set_by()}
+								<span class="font-semibold text-neutral-100">{set.author}</span>{:else}<span
+									class="text-neutral-500">{m.item_set_unattributed()}</span
+								>{/if}
 						</p>
 						{#if posters.length || backdrops.length}
 							<button onclick={() => useSet(set)} class="btn btn-accent px-3 py-1 text-xs"
-								>Use this set</button
+								>{m.item_use_set()}</button
 							>
 						{/if}
 					</div>
@@ -351,7 +366,7 @@
 						{#if posters.length}
 							<div class="flex-none">
 								<p class="mb-1 text-[11px] text-neutral-500">
-									Poster{posters.length > 1 ? 's' : ''}
+									{posters.length > 1 ? m.item_posters() : m.item_poster()}
 								</p>
 								<div class="flex gap-2">
 									{#each posters as c (c.id)}<div class="w-20">{@render posterTile(c)}</div>{/each}
@@ -361,7 +376,7 @@
 						{#if backdrops.length}
 							<div class="min-w-0 flex-1">
 								<p class="mb-1 text-[11px] text-neutral-500">
-									Backdrop{backdrops.length > 1 ? 's' : ''}
+									{backdrops.length > 1 ? m.item_backdrops() : m.item_backdrop()}
 								</p>
 								<div class="grid grid-cols-2 gap-2">
 									{#each backdrops as c (c.id)}{@render backdropTile(c)}{/each}
@@ -372,7 +387,9 @@
 
 					{#if isShow && seasons.length}
 						<div class="mt-4">
-							<p class="mb-1 text-[11px] text-neutral-500">Season posters ({seasons.length})</p>
+							<p class="mb-1 text-[11px] text-neutral-500">
+								{m.item_season_posters({ count: seasons.length })}
+							</p>
 							<div class="grid grid-cols-4 gap-2 sm:grid-cols-8">
 								{#each seasons as c (c.id)}{@render posterTile(c)}{/each}
 							</div>
@@ -380,7 +397,9 @@
 					{/if}
 					{#if isShow && cards.length}
 						<div class="mt-4">
-							<p class="mb-1 text-[11px] text-neutral-500">Title cards ({cards.length})</p>
+							<p class="mb-1 text-[11px] text-neutral-500">
+								{m.item_title_cards({ count: cards.length })}
+							</p>
 							<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
 								{#each cards as c (c.id)}{@render backdropTile(c)}{/each}
 							</div>
@@ -392,9 +411,7 @@
 	</section>
 {:else}
 	<p class="mt-8 pb-32 text-sm text-neutral-500">
-		No candidates yet. {data.item.resolved
-			? 'Click “Find covers” to search the enabled providers.'
-			: 'This item has no resolved TMDB id, so providers cannot be searched.'}
+		{data.item.resolved ? m.item_no_candidates_resolved() : m.item_no_candidates_unresolved()}
 	</p>
 {/if}
 
@@ -424,33 +441,37 @@
 			</div>
 		</div>
 		<span class="text-xs text-neutral-400">
-			{selectedPoster ? 'poster' : 'no poster'}{selectedBackground ? ' · backdrop' : ''}
+			{selectedPoster ? m.item_label_poster() : m.item_label_no_poster()}{selectedBackground
+				? m.item_label_backdrop_suffix()
+				: ''}
 		</span>
 
 		<details class="text-xs">
-			<summary class="cursor-pointer text-neutral-400 hover:text-neutral-200">＋ custom</summary>
+			<summary class="cursor-pointer text-neutral-400 hover:text-neutral-200"
+				>{m.item_custom()}</summary
+			>
 			<div
 				class="absolute bottom-14 left-4 flex flex-col gap-2 rounded-lg border border-neutral-800 bg-neutral-900 p-3 shadow-xl"
 			>
 				<div class="flex gap-1.5">
 					<input
 						bind:value={posterUrlInput}
-						placeholder="Poster URL"
+						placeholder={m.item_poster_url_placeholder()}
 						class="input w-56 py-1 text-xs"
 					/>
 					<button onclick={() => useCustomUrl('poster')} class="btn btn-subtle px-2 py-1 text-xs"
-						>Set</button
+						>{m.item_set()}</button
 					>
 				</div>
 				<div class="flex gap-1.5">
 					<input
 						bind:value={backgroundUrlInput}
-						placeholder="Backdrop URL"
+						placeholder={m.item_backdrop_url_placeholder()}
 						class="input w-56 py-1 text-xs"
 					/>
 					<button
 						onclick={() => useCustomUrl('background')}
-						class="btn btn-subtle px-2 py-1 text-xs">Set</button
+						class="btn btn-subtle px-2 py-1 text-xs">{m.item_set()}</button
 					>
 				</div>
 				<div class="flex items-center gap-1.5">
@@ -463,11 +484,11 @@
 					<button
 						onclick={uploadPoster}
 						disabled={busy || !posterFile}
-						class="btn btn-subtle px-2 py-1 text-xs">Upload poster → Plex</button
+						class="btn btn-subtle px-2 py-1 text-xs">{m.item_upload_poster()}</button
 					>
 				</div>
 				<p class="text-[10px] text-neutral-500">
-					Upload is Plex-only. URLs apply to Plex + Kometa.
+					{m.item_upload_hint()}
 				</p>
 			</div>
 		</details>
@@ -477,12 +498,12 @@
 					>{message}</span
 				>{/if}
 			<select bind:value={method} class="input py-1 text-xs">
-				<option value="both">Plex + Kometa</option>
-				<option value="plex">Plex only</option>
-				<option value="kometa">Kometa only</option>
+				<option value="both">{m.library_method_both()}</option>
+				<option value="plex">{m.library_method_plex()}</option>
+				<option value="kometa">{m.library_method_kometa()}</option>
 			</select>
 			<button onclick={apply} disabled={busy || !selectedPoster} class="btn btn-accent"
-				>Apply</button
+				>{m.item_apply()}</button
 			>
 		</div>
 	</div>

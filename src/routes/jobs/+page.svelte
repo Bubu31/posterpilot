@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { invalidateAll } from '$app/navigation';
 	import JobProgress from '$lib/components/JobProgress.svelte';
+	import { m } from '$lib/paraglide/messages';
 
 	let { data } = $props();
 
@@ -9,12 +10,13 @@
 	);
 	const past = $derived(data.jobs.filter((j) => j.status !== 'pending' && j.status !== 'running'));
 
+	// Format timestamps with the active locale's conventions.
 	function fmt(ts: Date | null): string {
-		return ts ? new Date(ts).toLocaleString() : '—';
+		return ts ? new Date(ts).toLocaleString(data.locale) : '—';
 	}
 </script>
 
-<h1 class="text-2xl font-semibold tracking-tight">Jobs</h1>
+<h1 class="text-2xl font-semibold tracking-tight">{m.jobs_title()}</h1>
 
 {#if active.length}
 	<section class="mt-4 space-y-3">
@@ -24,19 +26,19 @@
 	</section>
 {/if}
 
-<h2 class="section-title mt-8">History</h2>
+<h2 class="section-title mt-8">{m.jobs_history()}</h2>
 <div class="surface overflow-hidden">
 	{#if past.length === 0}
-		<p class="p-4 text-sm text-neutral-500">No past jobs.</p>
+		<p class="p-4 text-sm text-neutral-500">{m.jobs_no_past()}</p>
 	{:else}
 		<table class="w-full text-sm">
 			<thead class="text-left text-xs text-neutral-500">
 				<tr class="border-b border-neutral-800">
-					<th class="px-4 py-2 font-medium">#</th>
-					<th class="px-4 py-2 font-medium">Type</th>
-					<th class="px-4 py-2 font-medium">Progress</th>
-					<th class="px-4 py-2 font-medium">Status</th>
-					<th class="px-4 py-2 font-medium">Finished</th>
+					<th class="px-4 py-2 font-medium">{m.jobs_col_id()}</th>
+					<th class="px-4 py-2 font-medium">{m.jobs_col_type()}</th>
+					<th class="px-4 py-2 font-medium">{m.jobs_col_progress()}</th>
+					<th class="px-4 py-2 font-medium">{m.jobs_col_status()}</th>
+					<th class="px-4 py-2 font-medium">{m.jobs_col_finished()}</th>
 				</tr>
 			</thead>
 			<tbody>
