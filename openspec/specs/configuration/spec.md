@@ -3,9 +3,7 @@
 ## Purpose
 
 TBD - created by archiving change add-poster-manager. Update Purpose after archive.
-
 ## Requirements
-
 ### Requirement: Provide and persist runtime configuration
 
 The system SHALL accept runtime configuration — Plex base URL, Plex token, TMDB credential, Kometa assets directory, and default apply method — from environment variables and from the settings UI, and SHALL persist UI-entered values so they survive restarts.
@@ -52,3 +50,23 @@ The system SHALL treat the Plex token and TMDB credential as secrets: never logg
 
 - **WHEN** the system logs requests or errors involving Plex or TMDB
 - **THEN** the secret values are redacted from all log output
+
+### Requirement: Per-provider artwork configuration
+
+The system SHALL provide configuration for each artwork provider — an enable/disable flag per provider and the Fanart.tv API key — settable through the Settings UI and overridable by environment variables, consistent with the existing configuration precedence (environment overrides persisted settings).
+
+#### Scenario: Toggle a provider
+
+- **WHEN** the user enables or disables a provider in Settings and saves
+- **THEN** the system persists that provider's enabled state and discovery honours it on the next run
+
+#### Scenario: Fanart.tv key from environment
+
+- **WHEN** a Fanart.tv API key is supplied via its environment variable
+- **THEN** the system uses that key and reports the setting as environment-managed in the UI
+
+#### Scenario: Secret key not echoed
+
+- **WHEN** the Fanart.tv key has been saved
+- **THEN** the Settings UI indicates it is set without revealing the stored value, matching how the Plex token and TMDB key are handled
+
