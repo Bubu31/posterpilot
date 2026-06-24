@@ -18,9 +18,17 @@
 	} = $props();
 
 	let root = $state<HTMLDivElement | null>(null);
+	let triggerEl = $state<HTMLButtonElement | null>(null);
+	let panel = $state<HTMLDivElement | null>(null);
 
 	function toggle() {
 		open = !open;
+	}
+
+	/** Close and return focus to the trigger (keyboard users don't get stranded). */
+	function close() {
+		open = false;
+		triggerEl?.focus();
 	}
 
 	// Close when clicking outside the popover, or on Escape.
@@ -28,27 +36,41 @@
 		if (open && root && !root.contains(e.target as Node)) open = false;
 	}
 	function onWindowKeyDown(e: KeyboardEvent) {
-		if (open && e.key === 'Escape') open = false;
+		if (open && e.key === 'Escape') close();
 	}
+
+	// Move focus into the panel when it opens. Prefer the first interactive control
+	// (it shows its own focus ring); fall back to the panel itself — which keeps a
+	// visible :focus-visible outline so keyboard users always get a focus cue.
+	$effect(() => {
+		if (!open) return;
+		const first = panel?.querySelector<HTMLElement>(
+			'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+		);
+		(first ?? panel)?.focus();
+	});
 </script>
 
 <svelte:window onpointerdown={onWindowPointerDown} onkeydown={onWindowKeyDown} />
 
 <div class="relative" bind:this={root}>
 	<button
+		bind:this={triggerEl}
 		type="button"
 		onclick={toggle}
 		aria-expanded={open}
-		aria-haspopup="true"
+		aria-haspopup="dialog"
 		class="btn btn-ghost gap-1.5 px-2.5 py-1.5 {active ? 'border-accent-600 text-accent-200' : ''}"
 	>
 		{@render trigger()}
-		<span aria-hidden="true" class="text-[10px] text-neutral-500">▾</span>
+		<span aria-hidden="true" class="text-[10px] text-neutral-400">▾</span>
 	</button>
 	{#if open}
 		<div
+			bind:this={panel}
 			role="dialog"
 			aria-label={label}
+			tabindex="-1"
 			class="surface absolute z-20 mt-2 w-64 bg-neutral-900 p-3 shadow-xl shadow-black/40 {align ===
 			'right'
 				? 'right-0'
