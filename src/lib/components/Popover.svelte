@@ -39,9 +39,15 @@
 		if (open && e.key === 'Escape') close();
 	}
 
-	// Move focus into the panel when it opens so keyboard users land on its controls.
+	// Move focus into the panel when it opens. Prefer the first interactive control
+	// (it shows its own focus ring); fall back to the panel itself — which keeps a
+	// visible :focus-visible outline so keyboard users always get a focus cue.
 	$effect(() => {
-		if (open) panel?.focus();
+		if (!open) return;
+		const first = panel?.querySelector<HTMLElement>(
+			'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+		);
+		(first ?? panel)?.focus();
 	});
 </script>
 
@@ -65,7 +71,7 @@
 			role="dialog"
 			aria-label={label}
 			tabindex="-1"
-			class="surface absolute z-20 mt-2 w-64 bg-neutral-900 p-3 shadow-xl shadow-black/40 focus:outline-none {align ===
+			class="surface absolute z-20 mt-2 w-64 bg-neutral-900 p-3 shadow-xl shadow-black/40 {align ===
 			'right'
 				? 'right-0'
 				: 'left-0'}"
