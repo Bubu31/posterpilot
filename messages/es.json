@@ -253,5 +253,9 @@
 	"footer_disclaimer": "Sin afiliación ni respaldo de Plex, Jellyfin, Emby, TMDB, MediUX, Fanart.tv o ThePosterDB. Las marcas pertenecen a sus dueños.",
 	"item_msg_applied": "Carátula aplicada",
 	"item_msg_apply_failed": "No se pudo aplicar a {target}: {error}",
-	"apply_target_server": "el servidor de medios"
+	"apply_target_server": "el servidor de medios",
+	"library_apply_confirm": "¿Aplicar carátulas elegidas automáticamente a {count} elementos? Esto modifica tu biblioteca.",
+	"library_apply_confirm_yes": "Sí, aplicar",
+	"library_action_failed": "Algo salió mal. Se mantuvo tu selección; inténtalo de nuevo.",
+	"library_empty_title": "Aún no hay elementos."
 }

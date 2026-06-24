@@ -253,5 +253,9 @@
 	"footer_disclaimer": "Sem afiliação ou endosso de Plex, Jellyfin, Emby, TMDB, MediUX, Fanart.tv ou ThePosterDB. As marcas pertencem aos seus donos.",
 	"item_msg_applied": "Capa aplicada",
 	"item_msg_apply_failed": "Não foi possível aplicar em {target}: {error}",
-	"apply_target_server": "o servidor de mídia"
+	"apply_target_server": "o servidor de mídia",
+	"library_apply_confirm": "Aplicar capas escolhidas automaticamente a {count} itens? Isso altera sua biblioteca.",
+	"library_apply_confirm_yes": "Sim, aplicar",
+	"library_action_failed": "Algo deu errado. Sua seleção foi mantida — tente novamente.",
+	"library_empty_title": "Nenhum item ainda."
 }

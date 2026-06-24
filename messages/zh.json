@@ -253,5 +253,9 @@
 	"footer_disclaimer": "与 Plex、Jellyfin、Emby、TMDB、MediUX、Fanart.tv 或 ThePosterDB 无关联，也未获其背书。商标归各自所有者所有。",
 	"item_msg_applied": "封面已应用",
 	"item_msg_apply_failed": "无法应用到 {target}：{error}",
-	"apply_target_server": "媒体服务器"
+	"apply_target_server": "媒体服务器",
+	"library_apply_confirm": "将自动挑选的封面应用到 {count} 个项目？这会写入你的媒体库。",
+	"library_apply_confirm_yes": "确认应用",
+	"library_action_failed": "出错了。已保留你的选择，请重试。",
+	"library_empty_title": "暂无项目。"
 }
