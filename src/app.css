@@ -112,4 +112,30 @@ body {
 	.input {
 		@apply rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm transition-colors focus:border-accent-500;
 	}
+
+	/* Rendered GitHub release notes in the What's New modal. */
+	.release-notes :where(h2) {
+		@apply mt-5 mb-2 text-base font-semibold text-neutral-100 first:mt-0;
+	}
+	.release-notes :where(h3, h4) {
+		@apply mt-4 mb-2 text-xs font-semibold tracking-wide text-neutral-400 uppercase first:mt-0;
+	}
+	.release-notes :where(p) {
+		@apply my-2 text-neutral-300;
+	}
+	.release-notes :where(ul) {
+		@apply my-2 list-disc space-y-1 pl-5;
+	}
+	.release-notes :where(li) {
+		@apply text-neutral-300 marker:text-neutral-600;
+	}
+	.release-notes :where(a) {
+		@apply text-accent-300 underline underline-offset-2 hover:text-accent-200;
+	}
+	.release-notes :where(strong) {
+		@apply font-semibold text-neutral-100;
+	}
+	.release-notes :where(code) {
+		@apply rounded bg-neutral-800 px-1 py-0.5 text-[0.85em] text-neutral-200;
+	}
 }

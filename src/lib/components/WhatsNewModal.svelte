@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages';
+	import { renderReleaseNotes } from '$lib/markdown';
 
 	let {
 		open = $bindable(false),
@@ -62,6 +63,7 @@
 	}
 
 	const title = $derived(name ?? (version ? `v${version}` : m.whats_new_title()));
+	const renderedBody = $derived(body ? renderReleaseNotes(body) : '');
 
 	// On open: remember what had focus, then focus the close button. On close:
 	// restore focus to where the user was so they aren't dropped at the top.
@@ -113,7 +115,9 @@
 
 			<div class="overflow-y-auto p-4">
 				{#if body}
-					<p class="text-sm whitespace-pre-wrap text-neutral-300">{body}</p>
+					<!-- eslint-disable-next-line svelte/no-at-html-tags -- input is
+					     HTML-escaped and tag-whitelisted in renderReleaseNotes -->
+					<div class="release-notes text-sm text-neutral-300">{@html renderedBody}</div>
 				{:else}
 					<p class="text-sm text-neutral-400">{m.whats_new_empty()}</p>
 				{/if}
