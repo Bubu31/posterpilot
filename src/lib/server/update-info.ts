@@ -29,6 +29,12 @@ export interface UpdateInfo {
 	currentBody: string | null;
 	/** The running version's release page URL. */
 	currentUrl: string;
+	/**
+	 * Whether the running version's release was actually resolved from GitHub.
+	 * False when that lookup failed (so the client can retry rather than show an
+	 * empty "What's new" and prematurely mark the version seen).
+	 */
+	currentResolved: boolean;
 }
 
 /** Normalize a release's display name: trimmed non-empty `name`, else null. */
@@ -63,10 +69,12 @@ export function buildUpdateInfo(
 		body: null,
 		currentName: null,
 		currentBody: null,
-		currentUrl: RELEASES_PAGE
+		currentUrl: RELEASES_PAGE,
+		currentResolved: false
 	};
 
 	if (currentRes) {
+		info.currentResolved = true;
 		info.currentName = displayName(currentRes);
 		info.currentBody = notes(currentRes);
 		info.currentUrl = currentRes.html_url ?? RELEASES_PAGE;

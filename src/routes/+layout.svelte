@@ -68,6 +68,7 @@
 		currentName: string | null;
 		currentBody: string | null;
 		currentUrl: string;
+		currentResolved: boolean;
 	};
 	let update = $state<Update | null>(null);
 
@@ -106,10 +107,11 @@
 	}
 
 	// One-time-after-update: show the modal once when the running version is newer
-	// than the last version the user saw. Called AFTER the update check resolves so
-	// the modal has the running version's notes, and the "seen" marker is only
-	// written once the check completed — a failed/slow check leaves the marker so
-	// it retries on the next load instead of silently burning the prompt.
+	// than the last version the user saw. Shown only after the running version's
+	// release notes actually resolved from GitHub, and the "seen" marker is written
+	// only then — so a failed/slow check (or a GitHub tag lookup that hasn't
+	// recovered yet) retries on the next load instead of flashing an empty modal
+	// and burning the prompt.
 	function maybeShowWhatsNew() {
 		try {
 			const lastSeen = localStorage.getItem(LAST_SEEN_KEY);
@@ -118,7 +120,9 @@
 				return;
 			}
 			if (!isNewerVersion(data.version, lastSeen)) return;
-			if (!update) return; // check failed — leave the marker so we retry next load
+			// Wait until the running version's own notes are available, not just until
+			// /api/update returned (it returns a non-null object even if the tag lookup failed).
+			if (!update?.currentResolved) return;
 			whatsNewMode = 'current';
 			whatsNewOpen = true;
 			localStorage.setItem(LAST_SEEN_KEY, data.version);

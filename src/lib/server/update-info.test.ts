@@ -29,7 +29,8 @@ describe('buildUpdateInfo', () => {
 			body: null,
 			currentName: null,
 			currentBody: null,
-			currentUrl: RELEASES_PAGE
+			currentUrl: RELEASES_PAGE,
+			currentResolved: false
 		});
 	});
 
@@ -92,6 +93,16 @@ describe('buildUpdateInfo', () => {
 		expect(info.latest).toBeNull();
 		expect(info.updateAvailable).toBe(false);
 		expect(info.currentBody).toContain('running version notes');
+	});
+
+	it('reports currentResolved per whether the running version release was found', () => {
+		expect(buildUpdateInfo('0.3.0', latest(), current()).currentResolved).toBe(true);
+		// A resolved release with empty notes still counts as resolved.
+		expect(
+			buildUpdateInfo('0.3.0', latest(), current({ body: '', name: '' })).currentResolved
+		).toBe(true);
+		// Tag lookup failed → not resolved (client should retry, not mark seen).
+		expect(buildUpdateInfo('0.3.0', latest(), null).currentResolved).toBe(false);
 	});
 
 	it('treats a missing tag_name as no known latest', () => {
