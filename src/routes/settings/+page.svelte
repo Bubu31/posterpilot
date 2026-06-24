@@ -185,15 +185,17 @@
 	} | null>(null);
 
 	// Validate the integer fields before saving; returns an error string or null.
+	// A type=number bind yields number | null (empty), so coerce through String.
 	function validateNumbers(): string | null {
-		const checks: [string, string, number][] = [
+		const checks: [unknown, string, number][] = [
 			[mediuxDelayMs, m.settings_delay(), 0],
 			[mediuxConcurrency, m.settings_concurrency(), 1],
 			[httpCacheTtlDays, m.settings_cache_days(), 0]
 		];
 		for (const [raw, label, min] of checks) {
-			const n = Number(raw);
-			if (raw.trim() === '' || !Number.isInteger(n) || n < min) {
+			const s = String(raw ?? '').trim();
+			const n = Number(s);
+			if (s === '' || !Number.isInteger(n) || n < min) {
 				return m.settings_invalid_number({ field: label, min });
 			}
 		}
@@ -218,9 +220,11 @@
 				jellyfinUrl,
 				embyUrl,
 				kometaAssetsDir,
-				mediuxDelayMs,
-				mediuxConcurrency,
-				httpCacheTtlDays,
+				// type=number binds yield numbers; the settings API only persists string
+				// values, so stringify these before sending.
+				mediuxDelayMs: String(mediuxDelayMs),
+				mediuxConcurrency: String(mediuxConcurrency),
+				httpCacheTtlDays: String(httpCacheTtlDays),
 				defaultApplyMethod
 			};
 			// Only send secrets when (re)entered, so a blank field keeps the stored value.
