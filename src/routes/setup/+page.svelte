@@ -105,7 +105,8 @@
 	function validateStep(): string | null {
 		if (step === 1) {
 			if (serverType === 'plex') {
-				if (!plexUrl.trim() && !plexTokenSet) return m.setup_need_server();
+				// Plex needs both a URL and a token, so block if either is missing.
+				if (!plexUrl.trim() || !plexTokenSet) return m.setup_need_server();
 			} else if (serverType === 'jellyfin') {
 				if (!jellyfinUrl.trim() || !(jellyfinApiKey.trim() || data.config.jellyfinApiKeySet))
 					return m.setup_need_server();
