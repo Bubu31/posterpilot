@@ -244,10 +244,17 @@
 
 	// Persist the preferred language through the same path as the header switcher
 	// (writes the `language` setting, then reloads so SSR re-renders in the locale).
+	// Show a pending state immediately: the persist + reload takes a beat, and
+	// without feedback the switch looks like it did nothing.
+	let switchingLocale = $state(false);
 	function changeLanguage(event: Event) {
 		const value = (event.currentTarget as HTMLSelectElement).value;
+		if (value === language) return;
 		language = value as typeof language;
-		setLocale(value as Parameters<typeof setLocale>[0]);
+		switchingLocale = true;
+		Promise.resolve(setLocale(value as Parameters<typeof setLocale>[0])).catch(() => {
+			switchingLocale = false;
+		});
 	}
 </script>
 
@@ -536,11 +543,41 @@
 	{:else if tab === 'language'}
 		<div>
 			<label for="language" class="mb-1 block text-sm font-medium">{m.settings_language()}</label>
-			<select id="language" value={language} onchange={changeLanguage} class="input">
-				{#each data.availableLocales as loc (loc.code)}
-					<option value={loc.code}>{loc.name}</option>
-				{/each}
-			</select>
+			<div class="flex items-center gap-2">
+				<select
+					id="language"
+					value={language}
+					onchange={changeLanguage}
+					disabled={switchingLocale}
+					class="input disabled:opacity-60"
+				>
+					{#each data.availableLocales as loc (loc.code)}
+						<option value={loc.code}>{loc.name}</option>
+					{/each}
+				</select>
+				{#if switchingLocale}
+					<svg
+						class="size-4 animate-spin text-accent-400"
+						viewBox="0 0 24 24"
+						fill="none"
+						aria-hidden="true"
+					>
+						<circle
+							class="opacity-25"
+							cx="12"
+							cy="12"
+							r="10"
+							stroke="currentColor"
+							stroke-width="3"
+						/>
+						<path
+							class="opacity-90"
+							fill="currentColor"
+							d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2z"
+						/>
+					</svg>
+				{/if}
+			</div>
 		</div>
 	{:else}
 		<div>
