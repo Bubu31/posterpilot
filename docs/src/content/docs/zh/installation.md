@@ -86,9 +86,12 @@ docker compose up -d
 docker compose up -d --build
 ```
 
-## Unraid（Community Apps 模板）
+## Unraid（Community Apps）
 
-仓库在 `unraid/posterpilot.xml` 处提供了一个 Community Apps 模板。在
+PosterPilot 已上架 **Unraid Community Apps** 应用商店。打开 **Apps** 标签页，
+搜索 **PosterPilot**，然后点击 _Install_。
+
+想手动添加？仓库同样在 `unraid/posterpilot.xml` 处提供了模板。在
 Unraid 界面中进入 **Docker → Add Container**，并将以下内容粘贴到 _Template_ 字段中：
 
 ```

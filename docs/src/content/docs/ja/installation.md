@@ -83,9 +83,12 @@ docker compose up -d
 docker compose up -d --build
 ```
 
-## Unraid（Community Apps テンプレート）
+## Unraid（Community Apps）
 
-リポジトリは `unraid/posterpilot.xml` に Community Apps テンプレートを同梱しています。
+PosterPilot は **Unraid Community Apps** ストアに掲載されています。**Apps** タブを開き、
+**PosterPilot** を検索して _Install_ をクリックしてください。
+
+手動で追加したい場合は、リポジトリにテンプレート `unraid/posterpilot.xml` も同梱しています。
 Unraid の UI で **Docker → Add Container** に移動し、これを _Template_ フィールドに貼り付けます：
 
 ```

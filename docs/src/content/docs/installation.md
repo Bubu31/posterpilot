@@ -86,10 +86,14 @@ pulling it:
 docker compose up -d --build
 ```
 
-## Unraid (Community Apps template)
+## Unraid (Community Apps)
 
-The repository ships a Community Apps template at `unraid/posterpilot.xml`. In the
-Unraid UI go to **Docker → Add Container** and paste this into the _Template_ field:
+PosterPilot is listed on the **Unraid Community Apps** store. Open the **Apps** tab,
+search for **PosterPilot**, and click _Install_.
+
+Prefer to add it by hand? The repository also ships the template at
+`unraid/posterpilot.xml`. In the Unraid UI go to **Docker → Add Container** and paste
+this into the _Template_ field:
 
 ```
 https://raw.githubusercontent.com/diegopeixoto/posterpilot/main/unraid/posterpilot.xml

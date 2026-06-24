@@ -159,9 +159,13 @@ Two volumes matter:
 
 ### Unraid
 
-A Community Apps template is included at
-[`unraid/posterpilot.xml`](unraid/posterpilot.xml). On Unraid: **Docker → Add
-Container**, paste the template URL into _Template_:
+PosterPilot is on the **Unraid Community Apps** store. Open the **Apps** tab and
+search for **PosterPilot**, then click _Install_ — the template fills in the GHCR
+image and volumes for you.
+
+Prefer to add it by hand? The template is also at
+[`unraid/posterpilot.xml`](unraid/posterpilot.xml): go to **Docker → Add
+Container** and paste the template URL into _Template_:
 
 ```
 https://raw.githubusercontent.com/diegopeixoto/posterpilot/main/unraid/posterpilot.xml

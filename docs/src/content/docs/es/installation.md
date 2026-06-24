@@ -90,9 +90,12 @@ descargarla:
 docker compose up -d --build
 ```
 
-## Unraid (plantilla de Community Apps)
+## Unraid (Community Apps)
 
-El repositorio incluye una plantilla de Community Apps en
+PosterPilot está publicado en la tienda **Community Apps de Unraid**. Abre la pestaña
+**Apps**, busca **PosterPilot** y haz clic en _Install_.
+
+¿Prefieres añadirlo a mano? El repositorio también incluye la plantilla en
 `unraid/posterpilot.xml`. En la interfaz de Unraid ve a **Docker → Add Container**
 y pega esto en el campo _Template_:
 
