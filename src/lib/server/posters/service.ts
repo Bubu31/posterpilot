@@ -1,3 +1,4 @@
+import { dirname as posixDirname } from 'node:path/posix';
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
@@ -11,6 +12,14 @@ import { resolveActiveServer, serverTypeLabel } from '$lib/server/media-server';
 import { writeKometaYaml } from '$lib/server/kometa/yaml';
 import { logEvent } from '$lib/server/events';
 import { availableProviders, PROVIDER_ORDER, type ProviderId } from './providers';
+
+/**
+ * Where posterpilot.yml is written: co-located with config.yml when Kometa
+ * config sync is configured, otherwise the standalone assets directory.
+ */
+function kometaOutDir(config: AppConfig): string {
+	return config.kometaConfigPath ? posixDirname(config.kometaConfigPath) : config.kometaAssetsDir;
+}
 
 /**
  * Discover artwork candidates for an item across all enabled providers and persist
@@ -198,7 +207,7 @@ export async function applyToItem(
 		let outcome: ApplyOutcome = { method: 'kometa', status: 'success' };
 		try {
 			if (!item.tmdbId) throw new Error('Cannot export to Kometa without a TMDB id');
-			await writeKometaYaml(config.kometaAssetsDir, [
+			await writeKometaYaml(kometaOutDir(config), [
 				{ tmdbId: item.tmdbId, title: item.title, posterUrl, backgroundUrl }
 			]);
 		} catch (e) {

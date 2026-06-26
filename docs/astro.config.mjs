@@ -69,6 +69,10 @@ export default defineConfig({
 					link: '/usage/'
 				},
 				{
+					label: 'Kometa manager',
+					link: '/kometa-config-sync/'
+				},
+				{
 					label: 'Contributing',
 					link: '/contributing/'
 				},

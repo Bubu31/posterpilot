@@ -16,5 +16,10 @@ export const load: PageServerLoad = async () => {
 	const events = hasMore ? rows.slice(0, EVENTS_PAGE_SIZE) : rows;
 	const eventsNextCursor = hasMore ? events[events.length - 1].id : null;
 
-	return { config: await publicConfig(), sections, events, eventsNextCursor };
+	return {
+		config: await publicConfig(),
+		sections,
+		events,
+		eventsNextCursor
+	};
 };

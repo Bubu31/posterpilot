@@ -553,6 +553,10 @@
 				class="input w-full disabled:opacity-50"
 			/>
 			<p class="mt-1 text-xs text-neutral-400">{m.settings_kometa_dir_hint()}</p>
+			<p class="mt-1 text-xs text-neutral-400">
+				{m.settings_kometa_manager_pointer()}
+				<a href="/kometa" class="text-accent-300 underline">{m.nav_kometa()}</a>
+			</p>
 		</div>
 
 		<div class="grid grid-cols-3 gap-3">
