@@ -17,6 +17,7 @@
 import { Document, isAlias, isMap, isScalar, isSeq, parseDocument, YAMLMap, YAMLSeq } from 'yaml';
 import { DEFAULT_FILENAME } from './yaml';
 import { knownDefaults } from './defaults-catalog';
+import { CONNECTOR_DEPENDENCIES } from './connectors';
 
 /** Plex/TMDB credentials PosterPilot writes into the connection sections. */
 export interface KometaCreds {
@@ -33,6 +34,12 @@ export interface PlanLibrary {
 	defaults: string[];
 	/** Whether to wire the `posterpilot.yml` `metadata_files` entry. */
 	metadata: boolean;
+	/** Default overlay names to ensure as `- default: <name>` under `overlay_files`. */
+	overlays?: string[];
+	/** Per-library `operations` keys to set (key → scalar string value). */
+	operations?: Record<string, string>;
+	/** Per-library `settings` overrides to set (key → scalar string value). */
+	settingsOverrides?: Record<string, string>;
 }
 
 /** A bounded global setting/webhook value to manage. */
@@ -42,6 +49,15 @@ export interface ManagedSetting {
 	value: string;
 }
 
+/** What PosterPilot owns within one managed library, for safe removal next sync. */
+export interface ManagedLib {
+	metadata: boolean;
+	defaults: string[];
+	overlays?: string[];
+	operations?: string[];
+	settingsKeys?: string[];
+}
+
 /** The fully-resolved desired managed state. */
 export interface ConfigPlan {
 	creds: KometaCreds;
@@ -49,13 +65,21 @@ export interface ConfigPlan {
 	metadataFile: string;
 	libraries: PlanLibrary[];
 	settings: ManagedSetting[];
+	/**
+	 * Generic service connectors beyond plex/tmdb (which come via `creds`):
+	 * section → key/value, e.g. `{ tautulli: { url, apikey }, trakt: { … } }`.
+	 * Empty-string values mean "unmanage" (remove if previously set).
+	 */
+	connections?: Record<string, Record<string, string>>;
 }
 
 /** What PosterPilot last wrote, used to compute safe removals on the next sync. */
 export interface KometaSnapshot {
 	metadataPath: string;
-	libraries: Record<string, { metadata: boolean; defaults: string[] }>;
+	libraries: Record<string, ManagedLib>;
 	managedSettingKeys: string[];
+	/** Managed key names per connector section (for removal on unmanage). */
+	connections?: Record<string, string[]>;
 }
 
 /** A single change a sync would make (for the preview diff). */
@@ -88,8 +112,16 @@ export function serialize(doc: Document): string {
 export function buildPlan(input: {
 	creds: KometaCreds;
 	metadataFile: string;
-	libraries: { name: string; defaults: string[]; metadata?: boolean }[];
+	libraries: {
+		name: string;
+		defaults: string[];
+		metadata?: boolean;
+		overlays?: string[];
+		operations?: Record<string, string>;
+		settingsOverrides?: Record<string, string>;
+	}[];
 	settings?: ManagedSetting[];
+	connections?: Record<string, Record<string, string>>;
 }): ConfigPlan {
 	return {
 		creds: input.creds,
@@ -97,9 +129,13 @@ export function buildPlan(input: {
 		libraries: input.libraries.map((l) => ({
 			name: l.name,
 			defaults: dedupe(knownDefaults(l.defaults)),
-			metadata: l.metadata ?? true
+			metadata: l.metadata ?? true,
+			overlays: l.overlays ? dedupe(l.overlays) : undefined,
+			operations: l.operations,
+			settingsOverrides: l.settingsOverrides
 		})),
-		settings: input.settings ?? []
+		settings: input.settings ?? [],
+		connections: input.connections
 	};
 }
 
@@ -193,6 +229,26 @@ export function applyPlan(
 		setScalar(doc, ['tmdb', 'apikey'], plan.creds.tmdbKey, changes);
 	}
 
+	// ── Service connectors (tautulli, trakt, radarr, …; plex/tmdb come via creds) ─
+	const managedConn: Record<string, string[]> = {};
+	const prevConn = snapshot?.connections ?? {};
+	for (const [section, values] of Object.entries(plan.connections ?? {})) {
+		managedConn[section] = applyManagedMap(
+			doc,
+			[section],
+			values,
+			prevConn[section] ?? [],
+			changes,
+			warnings,
+			section
+		);
+	}
+	// Connector sections dropped entirely from the plan: remove their managed keys.
+	for (const [section, prevKeys] of Object.entries(prevConn)) {
+		if (plan.connections && section in plan.connections) continue;
+		applyManagedMap(doc, [section], {}, prevKeys, changes, warnings, section);
+	}
+
 	// ── Libraries ──────────────────────────────────────────────────────────────
 	const planByName = new Map(plan.libraries.map((l) => [l.name, l]));
 	const prevLibs = snapshot?.libraries ?? {};
@@ -209,12 +265,31 @@ export function applyPlan(
 		if (prev.metadata && snapshot) {
 			removeMetadataEntry(doc, name, snapshot.metadataPath, changes);
 		}
-		removeDefaults(doc, name, prev.defaults, changes);
+		removeDefaults(doc, name, 'collection_files', prev.defaults, changes);
+		removeDefaults(doc, name, 'overlay_files', prev.overlays ?? [], changes);
+		applyManagedMap(
+			doc,
+			['libraries', name, 'operations'],
+			{},
+			prev.operations ?? [],
+			changes,
+			warnings,
+			`libraries.${name}.operations`
+		);
+		applyManagedMap(
+			doc,
+			['libraries', name, 'settings'],
+			{},
+			prev.settingsKeys ?? [],
+			changes,
+			warnings,
+			`libraries.${name}.settings`
+		);
 	}
 
-	// Add/reconcile managed libraries. Track the defaults we actually own (added or
-	// were already managing) so the snapshot never claims a user's pre-existing entry.
-	const managedByLib: Record<string, { metadata: boolean; defaults: string[] }> = {};
+	// Add/reconcile managed libraries. Track what we actually own (added or were
+	// already managing) so the snapshot never claims a user's pre-existing entry.
+	const managedByLib: Record<string, ManagedLib> = {};
 	for (const lib of plan.libraries) {
 		const libPath = ['libraries', lib.name];
 		const existing = nodeAt(doc, libPath);
@@ -232,9 +307,48 @@ export function applyPlan(
 
 		if (lib.metadata) ensureMetadataEntry(doc, lib.name, plan.metadataFile, snapshot, changes);
 
-		const prevDefaults = prevLibs[lib.name]?.defaults ?? [];
-		const ownedDefaults = reconcileDefaults(doc, lib.name, lib.defaults, prevDefaults, changes);
-		managedByLib[lib.name] = { metadata: lib.metadata, defaults: ownedDefaults };
+		const prev = prevLibs[lib.name];
+		const ownedDefaults = reconcileDefaults(
+			doc,
+			lib.name,
+			'collection_files',
+			lib.defaults,
+			prev?.defaults ?? [],
+			changes
+		);
+		const ownedOverlays = reconcileDefaults(
+			doc,
+			lib.name,
+			'overlay_files',
+			lib.overlays ?? [],
+			prev?.overlays ?? [],
+			changes
+		);
+		const ownedOps = applyManagedMap(
+			doc,
+			['libraries', lib.name, 'operations'],
+			lib.operations ?? {},
+			prev?.operations ?? [],
+			changes,
+			warnings,
+			`libraries.${lib.name}.operations`
+		);
+		const ownedSettings = applyManagedMap(
+			doc,
+			['libraries', lib.name, 'settings'],
+			lib.settingsOverrides ?? {},
+			prev?.settingsKeys ?? [],
+			changes,
+			warnings,
+			`libraries.${lib.name}.settings`
+		);
+		managedByLib[lib.name] = {
+			metadata: lib.metadata,
+			defaults: ownedDefaults,
+			overlays: ownedOverlays,
+			operations: ownedOps,
+			settingsKeys: ownedSettings
+		};
 	}
 
 	// ── Bounded global settings / webhooks ──────────────────────────────────────
@@ -261,7 +375,8 @@ export function applyPlan(
 	const nextSnapshot: KometaSnapshot = {
 		metadataPath: plan.metadataFile,
 		libraries: managedByLib,
-		managedSettingKeys: plan.settings.map((s) => `${s.section}.${s.key}`)
+		managedSettingKeys: plan.settings.map((s) => `${s.section}.${s.key}`),
+		connections: managedConn
 	};
 
 	return { doc, changes, nextSnapshot, warnings: dedupe(warnings) };
@@ -271,6 +386,48 @@ function splitComposite(composite: string): ['settings' | 'webhooks', string] {
 	const idx = composite.indexOf('.');
 	const section = composite.slice(0, idx) as 'settings' | 'webhooks';
 	return [section, composite.slice(idx + 1)];
+}
+
+/**
+ * Set/remove a managed scalar map at `basePath` (a connector section, or a
+ * library's `operations`/`settings`). Writes each non-empty value, removes any
+ * previously-managed key no longer present, and returns the keys now owned.
+ * Skips with a warning if the target node uses anchors/aliases.
+ */
+function applyManagedMap(
+	doc: Document,
+	basePath: string[],
+	values: Record<string, string>,
+	prevKeys: string[],
+	changes: ChangeEntry[],
+	warnings: string[],
+	warnLabel: string
+): string[] {
+	const node = nodeAt(doc, basePath);
+	if (node !== undefined && node !== null && hasAliasOrAnchor(node)) {
+		warnings.push(warnLabel);
+		return prevKeys; // leave untouched, keep the prior ownership record
+	}
+	const managed: string[] = [];
+	for (const [key, value] of Object.entries(values)) {
+		if (value === '') continue; // empty = unmanage
+		setScalar(doc, [...basePath, key], value, changes);
+		managed.push(key);
+	}
+	for (const key of prevKeys) {
+		if (managed.includes(key)) continue;
+		const before = scalarAt(doc, [...basePath, key]);
+		if (before !== undefined) {
+			doc.deleteIn([...basePath, key]);
+			changes.push({
+				op: 'remove',
+				path: [...basePath, key].join('.'),
+				before: String(before),
+				after: null
+			});
+		}
+	}
+	return managed;
 }
 
 /** Ensure exactly one managed `metadata_files` `file:` entry for the library. */
@@ -329,13 +486,14 @@ function removeMetadataEntry(
 function reconcileDefaults(
 	doc: Document,
 	name: string,
+	listKey: string,
 	desired: string[],
 	prevDefaults: string[],
 	changes: ChangeEntry[]
 ): string[] {
-	const path = ['libraries', name, 'collection_files'];
+	const path = ['libraries', name, listKey];
 	const toRemove = prevDefaults.filter((d) => !desired.includes(d));
-	if (toRemove.length) removeDefaults(doc, name, toRemove, changes);
+	if (toRemove.length) removeDefaults(doc, name, listKey, toRemove, changes);
 
 	const desiredToAdd = desired.filter((d) => {
 		const seq = nodeAt(doc, path);
@@ -357,10 +515,11 @@ function reconcileDefaults(
 function removeDefaults(
 	doc: Document,
 	name: string,
+	listKey: string,
 	defaults: string[],
 	changes: ChangeEntry[]
 ): void {
-	const path = ['libraries', name, 'collection_files'];
+	const path = ['libraries', name, listKey];
 	const seq = nodeAt(doc, path);
 	if (!isSeq(seq)) return;
 	for (const d of defaults) {
@@ -405,6 +564,38 @@ export function topLevelKeys(doc: Document): string[] {
 	const c = doc.contents;
 	if (!isMap(c)) return [];
 	return c.items.map((p) => (isScalar(p.key) ? String(p.key.value) : String(p.key)));
+}
+
+/** A library feature (chart/overlay) that needs a connector that isn't configured. */
+export interface ConsistencyWarning {
+	library: string;
+	feature: string;
+	requiresConnector: string;
+}
+
+/**
+ * Flag enabled chart collections / overlays that require a service connector
+ * which is neither in the plan nor already present (non-empty) in the file.
+ * Pure and non-blocking — the orchestration surfaces these in the preview.
+ */
+export function checkConsistency(plan: ConfigPlan, doc: Document): ConsistencyWarning[] {
+	const deps = new Map(CONNECTOR_DEPENDENCIES.map((d) => [d.feature, d.requiresConnector]));
+	const configured = (section: string): boolean => {
+		const planned = plan.connections?.[section];
+		if (planned && Object.values(planned).some((v) => v !== '')) return true;
+		if (section === 'plex' && plan.creds.plexToken) return true;
+		if (section === 'tmdb' && plan.creds.tmdbKey) return true;
+		const node = nodeAt(doc, [section]);
+		return isMap(node) && node.items.length > 0;
+	};
+	const out: ConsistencyWarning[] = [];
+	for (const lib of plan.libraries) {
+		for (const feature of [...lib.defaults, ...(lib.overlays ?? [])]) {
+			const req = deps.get(feature);
+			if (req && !configured(req)) out.push({ library: lib.name, feature, requiresConnector: req });
+		}
+	}
+	return out;
 }
 
 const SECRET_PATHS = new Set(['plex.token', 'tmdb.apikey']);

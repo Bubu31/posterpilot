@@ -3,6 +3,7 @@ import {
 	applyPlan,
 	buildOwnedDoc,
 	buildPlan,
+	checkConsistency,
 	loadDoc,
 	redactSecrets,
 	scaffoldDoc,
@@ -140,6 +141,115 @@ describe('applyPlan — settings & secrets', () => {
 		expect(token?.after).toBe('***');
 		const url = redacted.find((c) => c.path === 'plex.url');
 		expect(url?.after).toBe('http://new:32400'); // non-secret untouched
+	});
+});
+
+const NO_CREDS = { plexUrl: null, plexToken: null, tmdbKey: null };
+
+describe('applyPlan — generalized sections', () => {
+	it('manages a connector section and removes a cleared field', () => {
+		const p = buildPlan({
+			creds: NO_CREDS,
+			metadataFile: META,
+			libraries: [],
+			connections: { tautulli: { url: 'http://tt:8181', apikey: 'k' } }
+		});
+		const first = applyPlan(loadDoc(''), p, null);
+		const out1 = serialize(first.doc);
+		expect(out1).toContain('tautulli:');
+		expect(out1).toContain('url: http://tt:8181');
+		expect(first.nextSnapshot.connections?.tautulli).toEqual(['url', 'apikey']);
+
+		const p2 = buildPlan({
+			creds: NO_CREDS,
+			metadataFile: META,
+			libraries: [],
+			connections: { tautulli: { url: 'http://tt:8181', apikey: '' } }
+		});
+		const out2 = serialize(applyPlan(loadDoc(serialize(first.doc)), p2, first.nextSnapshot).doc);
+		expect(out2).toContain('url: http://tt:8181');
+		expect(out2).not.toContain('apikey: k');
+	});
+
+	it('manages per-library overlays, leaving the user overlay alone', () => {
+		const base = loadDoc(
+			'libraries:\n  Movies:\n    overlay_files:\n      - default: ribbon # mine\n'
+		);
+		const p = buildPlan({
+			creds: NO_CREDS,
+			metadataFile: META,
+			libraries: [
+				{ name: 'Movies', defaults: [], overlays: ['mediastinger', 'ribbon'], metadata: false }
+			]
+		});
+		const first = applyPlan(base, p, null);
+		const out = serialize(first.doc);
+		expect(out).toContain('default: mediastinger');
+		expect(out.match(/default: ribbon/g)?.length).toBe(1); // user's, not re-added
+		expect(first.nextSnapshot.libraries['Movies'].overlays).toEqual(['mediastinger']);
+	});
+
+	it('manages per-library operations and settings overrides (string-valued)', () => {
+		const base = loadDoc('libraries:\n  Movies: {}\n');
+		const p = buildPlan({
+			creds: NO_CREDS,
+			metadataFile: META,
+			libraries: [
+				{
+					name: 'Movies',
+					defaults: [],
+					metadata: false,
+					operations: { mass_genre_update: 'tmdb' },
+					settingsOverrides: { asset_directory: '/assets/movies' }
+				}
+			]
+		});
+		const first = applyPlan(base, p, null);
+		const out = serialize(first.doc);
+		expect(out).toContain('mass_genre_update: tmdb');
+		expect(out).toContain('asset_directory: /assets/movies');
+		expect(first.nextSnapshot.libraries['Movies'].operations).toEqual(['mass_genre_update']);
+
+		const p2 = buildPlan({
+			creds: NO_CREDS,
+			metadataFile: META,
+			libraries: [
+				{ name: 'Movies', defaults: [], metadata: false, operations: { mass_genre_update: '' } }
+			]
+		});
+		const out2 = serialize(applyPlan(loadDoc(serialize(first.doc)), p2, first.nextSnapshot).doc);
+		expect(out2).not.toContain('mass_genre_update');
+	});
+});
+
+describe('checkConsistency', () => {
+	it('warns when a chart/overlay needs a connector that is not configured', () => {
+		const p = buildPlan({
+			creds: NO_CREDS,
+			metadataFile: META,
+			libraries: [{ name: 'Movies', defaults: ['trakt'], overlays: ['ratings'], metadata: false }]
+		});
+		const warns = checkConsistency(p, loadDoc(''));
+		expect(warns.find((w) => w.feature === 'trakt')?.requiresConnector).toBe('trakt');
+		expect(warns.find((w) => w.feature === 'ratings')?.requiresConnector).toBe('mdblist');
+	});
+
+	it('is satisfied when the connector is in the plan or already in the file', () => {
+		const p = buildPlan({
+			creds: NO_CREDS,
+			metadataFile: META,
+			libraries: [{ name: 'Movies', defaults: ['trakt'], metadata: false }],
+			connections: { trakt: { client_id: 'x', client_secret: 'y' } }
+		});
+		expect(checkConsistency(p, loadDoc('')).some((w) => w.feature === 'trakt')).toBe(false);
+		// or already present in the file
+		const p2 = buildPlan({
+			creds: NO_CREDS,
+			metadataFile: META,
+			libraries: [{ name: 'Movies', defaults: ['tautulli'], metadata: false }]
+		});
+		const doc = loadDoc('tautulli:\n  url: http://t\n  apikey: k\n');
+		expect(checkConsistency(p2, doc).some((w) => w.feature === 'tautulli')).toBe(false);
 	});
 });
 

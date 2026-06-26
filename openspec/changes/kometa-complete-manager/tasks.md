@@ -1,18 +1,18 @@
 ## 1. Engine generalization (pure)
 
-- [ ] 1.1 Extend `ConfigPlan` in `src/lib/server/kometa/config.ts` to be section-agnostic: `connections: Record<string, Record<string,string>>`, per-library `{ collections[], overlays[], operations, settingsOverrides, metadata }`, and `globals: { settings, webhooks }`
-- [ ] 1.2 Extend `KometaSnapshot` to track managed keys per section (connectors, per-library overlays/operations/collection-defaults/setting-overrides) for safe removal
-- [ ] 1.3 Generalize `applyPlan` to reconcile connectors (set/remove managed keys), `overlay_files` defaults, `operations`, per-library `settings`, and globals — reusing the structural-identity + snapshot removal pattern; keep anchor/alias skip + warnings
-- [ ] 1.4 Add a pure consistency checker: enabled chart/overlay → required connector present? return warnings
-- [ ] 1.5 Unit tests (`config.test.ts`): connector set/clear preserves siblings; overlay/operation add/remove; per-library settings override; idempotent re-sync; user content preserved; consistency warnings; own-mode regeneration still drops unmanaged
+- [x] 1.1 Extend `ConfigPlan` in `src/lib/server/kometa/config.ts` to be section-agnostic: `connections: Record<string, Record<string,string>>`, per-library `{ collections[], overlays[], operations, settingsOverrides, metadata }`, and `globals: { settings, webhooks }`
+- [x] 1.2 Extend `KometaSnapshot` to track managed keys per section (connectors, per-library overlays/operations/collection-defaults/setting-overrides) for safe removal
+- [x] 1.3 Generalize `applyPlan` to reconcile connectors (set/remove managed keys), `overlay_files` defaults, `operations`, per-library `settings`, and globals — reusing the structural-identity + snapshot removal pattern; keep anchor/alias skip + warnings
+- [x] 1.4 Add a pure consistency checker: enabled chart/overlay → required connector present? return warnings
+- [x] 1.5 Unit tests (`config.test.ts`): connector set/clear preserves siblings; overlay/operation add/remove; per-library settings override; idempotent re-sync; user content preserved; consistency warnings; own-mode regeneration still drops unmanaged
 
 ## 2. Catalogs (pure, client-safe)
 
-- [ ] 2.1 `src/lib/server/kometa/connectors.ts` — connector → fields (`{label, key, type: text|secret|url|bool, placeholder}`) for plex/tmdb/tautulli/trakt/mdblist/omdb/github/radarr/sonarr/notifiarr/gotify/ntfy/anidb/mal
-- [ ] 2.2 `src/lib/server/kometa/overlay-defaults.ts` — grouped overlay default names (mediastinger, resolution, audio_codec, ribbon, network, ratings, …) + `isKnownOverlay`
-- [ ] 2.3 `src/lib/server/kometa/operations.ts` — known per-library operations + value types
-- [ ] 2.4 Connector-dependency map (which charts/overlays require which connector) for the consistency checker
-- [ ] 2.5 Unit tests for the catalogs (membership guards, dependency lookups)
+- [x] 2.1 `src/lib/server/kometa/connectors.ts` — connector → fields (`{label, key, type: text|secret|url|bool, placeholder}`) for plex/tmdb/tautulli/trakt/mdblist/omdb/github/radarr/sonarr/notifiarr/gotify/ntfy/anidb/mal
+- [x] 2.2 `src/lib/server/kometa/overlay-defaults.ts` — grouped overlay default names (mediastinger, resolution, audio_codec, ribbon, network, ratings, …) + `isKnownOverlay`
+- [x] 2.3 `src/lib/server/kometa/operations.ts` — known per-library operations + value types
+- [x] 2.4 Connector-dependency map (which charts/overlays require which connector) for the consistency checker
+- [x] 2.5 Unit tests for the catalogs (membership guards, dependency lookups)
 
 ## 3. Path co-location
 
