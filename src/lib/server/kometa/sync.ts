@@ -51,7 +51,13 @@ import {
 import { DEFAULT_FILENAME } from './yaml';
 import { DEFAULT_COLLECTION_GROUPS, knownDefaults, type DefaultGroup } from './defaults-catalog';
 import { MANAGED_SETTINGS, type ManagedSettingDef } from './managed-settings';
-import { CONNECTORS, secretFieldKeys, type Connector } from './connectors';
+import {
+	CONNECTORS,
+	CONNECTOR_DOCS,
+	secretFieldKeys,
+	type Connector,
+	type ConnectorDoc
+} from './connectors';
 import { OVERLAY_GROUPS, knownOverlays, type OverlayGroup } from './overlay-defaults';
 import { OPERATIONS, type Operation } from './operations';
 import type { SyncSelectionInput } from './selection';
@@ -82,6 +88,7 @@ export interface KometaTabState {
 
 	// ── Complete-manager state (consumed by the /kometa page) ──────────────────
 	connectorCatalog: readonly Connector[];
+	connectorDocs: Readonly<Record<string, ConnectorDoc>>;
 	overlayCatalog: readonly OverlayGroup[];
 	operationCatalog: readonly Operation[];
 	/** Available libraries (section key → title/type) for the manager UI. */
@@ -267,6 +274,7 @@ export async function loadKometaState(): Promise<KometaTabState> {
 		catalog: DEFAULT_COLLECTION_GROUPS,
 		managedSettingDefs: MANAGED_SETTINGS,
 		connectorCatalog: CONNECTORS,
+		connectorDocs: CONNECTOR_DOCS,
 		overlayCatalog: OVERLAY_GROUPS,
 		operationCatalog: OPERATIONS,
 		availableLibraries: cached.map((l) => ({ key: l.key, title: l.title, type: l.type })),

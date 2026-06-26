@@ -84,29 +84,6 @@
 		else set.add(name);
 	}
 
-	const groupLabel: Record<string, () => string> = {
-		content: m.kometa_group_content,
-		production: m.kometa_group_production,
-		location: m.kometa_group_location,
-		time: m.kometa_group_time,
-		media: m.kometa_group_media,
-		content_rating: m.kometa_group_content_rating,
-		people: m.kometa_group_people,
-		award: m.kometa_group_award,
-		chart: m.kometa_group_chart,
-		content_ratings: m.kometa_group_content_rating,
-		awards: m.kometa_group_award,
-		utility: m.kometa_overlay_group_utility,
-		assets: m.kometa_ops_group_assets,
-		mass_update: m.kometa_ops_group_mass,
-		ratings: m.kometa_ops_group_ratings,
-		maintenance: m.kometa_ops_group_maintenance,
-		arr: m.kometa_ops_group_arr
-	};
-	function gLabel(id: string): string {
-		return groupLabel[id]?.() ?? id;
-	}
-
 	// ── Global settings (bounded) ──────────────────────────────────────────────
 	const globalSettings = $state<Record<string, string>>(
 		Object.fromEntries(km.managedSettingDefs.map((d) => [d.id, km.managedSettings[d.id] ?? '']))
@@ -360,12 +337,32 @@
 			<p class="text-xs text-neutral-400">{m.kometa_plex_only_note()}</p>
 			<p class="text-xs text-amber-400">{m.kometa_secrets_note()}</p>
 			{#each connectors as c (c.section)}
+				{@const cdoc = km.connectorDocs[c.section]}
 				<details class="surface p-4">
-					<summary class="cursor-pointer text-sm font-medium">{c.label}</summary>
+					<summary class="flex cursor-pointer items-center justify-between text-sm font-medium">
+						<span>{c.label}</span>
+						{#if cdoc?.docUrl}
+							<a
+								href={cdoc.docUrl}
+								target="_blank"
+								rel="noopener"
+								onclick={(e) => e.stopPropagation()}
+								class="text-xs font-normal text-accent-300 hover:underline">docs ↗</a
+							>
+						{/if}
+					</summary>
+					{#if cdoc?.description}
+						<p class="mt-2 text-xs text-neutral-400">{cdoc.description}</p>
+					{/if}
 					<div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
 						{#each c.fields as f (f.key)}
+							{@const help = cdoc?.fields[f.key] ?? f.note ?? ''}
 							<div>
-								<label for="conn-{c.section}-{f.key}" class="mb-1 block text-xs text-neutral-300">
+								<label
+									for="conn-{c.section}-{f.key}"
+									class="mb-1 block text-xs text-neutral-300"
+									title={help}
+								>
 									{f.key}{#if f.type === 'secret'}<span class="text-amber-400"> ·</span>{/if}
 								</label>
 								<input
@@ -374,7 +371,7 @@
 									bind:value={connValues[c.section][f.key]}
 									placeholder={f.type === 'secret' && secretSet(c.section, f.key)
 										? m.settings_secret_placeholder_set()
-										: (f.note ?? '')}
+										: help}
 									class="input w-full text-sm"
 								/>
 							</div>
@@ -411,10 +408,21 @@
 								</p>
 								{#each km.catalog as g (g.id)}
 									<div class="mb-2">
-										<p class="mb-1 text-[11px] text-neutral-500">{gLabel(g.id)}</p>
+										<p class="mb-1 flex items-center gap-2 text-[11px] text-neutral-500">
+											<span>{g.label}</span>
+											{#if g.docUrl}<a
+													href={g.docUrl}
+													target="_blank"
+													rel="noopener"
+													class="text-accent-300 hover:underline">↗</a
+												>{/if}
+										</p>
 										<div class="flex flex-wrap gap-x-4 gap-y-1">
 											{#each g.collections as c (c.name)}
-												<label class="flex items-center gap-1.5 text-xs text-neutral-300">
+												<label
+													class="flex items-center gap-1.5 text-xs text-neutral-300"
+													title={c.description}
+												>
 													<input
 														type="checkbox"
 														checked={lib.collections.has(c.name)}
@@ -433,16 +441,27 @@
 								</p>
 								{#each km.overlayCatalog as g (g.id)}
 									<div class="mb-2">
-										<p class="mb-1 text-[11px] text-neutral-500">{gLabel(g.id)}</p>
+										<p class="mb-1 flex items-center gap-2 text-[11px] text-neutral-500">
+											<span>{g.label}</span>
+											{#if g.docUrl}<a
+													href={g.docUrl}
+													target="_blank"
+													rel="noopener"
+													class="text-accent-300 hover:underline">↗</a
+												>{/if}
+										</p>
 										<div class="flex flex-wrap gap-x-4 gap-y-1">
-											{#each g.names as name (name)}
-												<label class="flex items-center gap-1.5 text-xs text-neutral-300">
+											{#each g.overlays as o (o.name)}
+												<label
+													class="flex items-center gap-1.5 text-xs text-neutral-300"
+													title={o.description}
+												>
 													<input
 														type="checkbox"
-														checked={lib.overlays.has(name)}
-														onchange={() => toggleSet(lib.overlays, name)}
+														checked={lib.overlays.has(o.name)}
+														onchange={() => toggleSet(lib.overlays, o.name)}
 													/>
-													{name}
+													{o.name}
 												</label>
 											{/each}
 										</div>
@@ -455,7 +474,7 @@
 								</p>
 								<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 									{#each km.operationCatalog as op (op.key)}
-										<div class="flex items-center gap-2">
+										<div class="flex items-center gap-2" title={op.description}>
 											{#if op.type === 'bool'}
 												<label class="flex items-center gap-1.5 text-xs text-neutral-300">
 													<input
@@ -467,11 +486,22 @@
 																? 'true'
 																: '')}
 													/>
-													{op.key}
+													{op.label}
+												</label>
+											{:else if op.enumValues}
+												<label class="flex flex-1 items-center gap-2 text-xs text-neutral-300">
+													<span class="w-44 shrink-0 truncate">{op.label}</span>
+													<select
+														bind:value={lib.operations[op.key]}
+														class="input w-full py-1 text-xs"
+													>
+														<option value="">—</option>
+														{#each op.enumValues as v (v)}<option value={v}>{v}</option>{/each}
+													</select>
 												</label>
 											{:else}
 												<label class="flex flex-1 items-center gap-2 text-xs text-neutral-300">
-													<span class="w-40 shrink-0 truncate">{op.key}</span>
+													<span class="w-44 shrink-0 truncate">{op.label}</span>
 													<input
 														bind:value={lib.operations[op.key]}
 														placeholder={op.type}

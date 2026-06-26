@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest';
 import {
 	CONNECTORS,
 	connectorBySection,
+	connectorDoc,
 	secretFieldKeys,
 	CONNECTOR_DEPENDENCIES
 } from './connectors';
+import { DEFAULT_COLLECTIONS } from './defaults-catalog';
 import { OVERLAY_DEFAULTS, isKnownOverlay, knownOverlays } from './overlay-defaults';
 import { OPERATIONS, isKnownOperation, operationByKey } from './operations';
 
@@ -68,5 +70,29 @@ describe('operations catalog', () => {
 	it('has no duplicate keys', () => {
 		const keys = OPERATIONS.map((o) => o.key);
 		expect(new Set(keys).size).toBe(keys.length);
+	});
+});
+
+describe('manual enrichment', () => {
+	it('every collection and overlay has a non-empty description', () => {
+		expect(DEFAULT_COLLECTIONS.length).toBeGreaterThan(40);
+		expect(DEFAULT_COLLECTIONS.every((c) => c.description.length > 10)).toBe(true);
+		expect(OVERLAY_DEFAULTS.every((o) => o.description.length > 10)).toBe(true);
+		// no duplicate overlay names
+		const names = OVERLAY_DEFAULTS.map((o) => o.name);
+		expect(new Set(names).size).toBe(names.length);
+	});
+
+	it('enum operations carry allowed values; bool ones do not', () => {
+		const genre = operationByKey('mass_genre_update');
+		expect(genre?.type).toBe('enum');
+		expect(genre?.enumValues).toContain('tmdb');
+		expect(operationByKey('assets_for_all')?.enumValues).toBeUndefined();
+	});
+
+	it('connector docs provide field help + a doc url', () => {
+		const t = connectorDoc('tautulli');
+		expect(t?.docUrl).toContain('kometa');
+		expect((t?.fields.apikey ?? '').length).toBeGreaterThan(5);
 	});
 });
