@@ -24,20 +24,36 @@ import {
 	applyPlan,
 	buildOwnedDoc,
 	buildPlan,
+	checkConsistency,
 	loadDoc,
+	readDefaultList,
+	readFileList,
+	readScalarMap,
+	readSectionKeys,
 	redactSecrets,
 	serialize,
 	topLevelKeys,
 	type ApplyResult,
 	type ChangeEntry,
 	type ConfigPlan,
+	type ConsistencyWarning,
 	type KometaSnapshot
 } from './config';
 import type { KometaConfigMode } from '$lib/server/config';
-import { readConfig, withConfigLock, writeConfigAtomic } from './config-io';
+import {
+	listBackups,
+	readConfig,
+	restoreBackup,
+	withConfigLock,
+	writeConfigAtomic,
+	type BackupInfo
+} from './config-io';
 import { DEFAULT_FILENAME } from './yaml';
 import { DEFAULT_COLLECTION_GROUPS, knownDefaults, type DefaultGroup } from './defaults-catalog';
 import { MANAGED_SETTINGS, type ManagedSettingDef } from './managed-settings';
+import { CONNECTORS, secretFieldKeys, type Connector } from './connectors';
+import { OVERLAY_GROUPS, knownOverlays, type OverlayGroup } from './overlay-defaults';
+import { OPERATIONS, type Operation } from './operations';
 import type { SyncSelectionInput } from './selection';
 
 export { parseSelectionInput, type SyncSelectionInput } from './selection';
@@ -63,6 +79,32 @@ export interface KometaTabState {
 	catalog: readonly DefaultGroup[];
 	/** Bounded managed-setting definitions to render inputs for. */
 	managedSettingDefs: readonly ManagedSettingDef[];
+
+	// ── Complete-manager state (consumed by the /kometa page) ──────────────────
+	connectorCatalog: readonly Connector[];
+	overlayCatalog: readonly OverlayGroup[];
+	operationCatalog: readonly Operation[];
+	/** Available libraries (section key → title/type) for the manager UI. */
+	availableLibraries: { key: string; title: string; type: string }[];
+	/** Current non-secret connector field values from the file (section → key → value). */
+	connectionValues: Record<string, Record<string, string>>;
+	/** Which secret connector fields are currently set in the file (section → keys). */
+	connectionSecretsSet: Record<string, string[]>;
+	/** Current per-library state read from the file, keyed by Kometa library name. */
+	libraryState: Record<
+		string,
+		{
+			collections: string[];
+			overlays: string[];
+			operations: Record<string, string>;
+			settings: Record<string, string>;
+			hasMetadata: boolean;
+		}
+	>;
+	/** Current global settings/webhooks from the file. */
+	globals: { settings: Record<string, string>; webhooks: Record<string, string> };
+	backups: BackupInfo[];
+	consistency: ConsistencyWarning[];
 }
 
 /** Result of a preview or sync, with secrets redacted for the browser. */
@@ -76,6 +118,8 @@ export interface SyncResult {
 	warnings: string[];
 	/** In `own` mode: existing top-level keys that will be dropped on write. */
 	dropped: string[];
+	/** Enabled charts/overlays whose connector is not configured. */
+	consistency: ConsistencyWarning[];
 	backup?: boolean;
 	scaffolded?: boolean;
 }
@@ -94,6 +138,22 @@ export function kometaOutputDir(config: AppConfig): string {
 	return config.kometaConfigPath ? posix.dirname(config.kometaConfigPath) : config.kometaAssetsDir;
 }
 
+/** Strip blank secret fields (keep existing) from a connector's submitted values. */
+function cleanConnectorFields(
+	section: string,
+	fields: Record<string, string>
+): Record<string, string> {
+	const secrets = secretFieldKeys(section);
+	const out: Record<string, string> = {};
+	for (const [k, v] of Object.entries(fields)) {
+		// A blank secret means "leave the stored value alone"; a blank non-secret
+		// means "remove it". So only drop blank secrets here.
+		if (v === '' && secrets.has(k)) continue;
+		out[k] = v;
+	}
+	return out;
+}
+
 /** Build the desired-state plan from the user's selections + resolved config. */
 async function planFromSelections(config: AppConfig, sel: SyncSelectionInput): Promise<ConfigPlan> {
 	const cached = await getCachedLibraries();
@@ -102,49 +162,123 @@ async function planFromSelections(config: AppConfig, sel: SyncSelectionInput): P
 		.map((key) => ({
 			name: titleByKey.get(key) ?? '',
 			defaults: knownDefaults(sel.defaults[key] ?? []),
+			overlays: knownOverlays(sel.overlays[key] ?? []),
+			operations: sel.operations[key] ?? {},
+			settingsOverrides: sel.librarySettings[key] ?? {},
 			metadata: true
 		}))
 		.filter((l) => l.name !== '');
+
+	const connections: Record<string, Record<string, string>> = {};
+	for (const [section, fields] of Object.entries(sel.connections)) {
+		const cleaned = cleanConnectorFields(section, fields);
+		if (Object.keys(cleaned).length) connections[section] = cleaned;
+	}
+
 	const settings = MANAGED_SETTINGS.flatMap((def) => {
 		const value = sel.settings[def.id];
 		return value ? [{ section: def.section, key: def.key, value }] : [];
 	});
+
 	return buildPlan({
 		creds: { plexUrl: config.plexUrl, plexToken: config.plexToken, tmdbKey: config.tmdbKey },
 		metadataFile: metadataFilePath(config),
 		libraries,
-		settings
+		settings,
+		connections
 	});
 }
 
-/** Load everything the Kometa tab needs to render. */
+/** Load everything the Kometa manager page needs to render. */
 export async function loadKometaState(): Promise<KometaTabState> {
 	const config = await resolveConfig();
 	const active = Boolean(config.kometaConfigPath);
 	let exists = false;
 	let parseError: string | null = null;
+	let doc = loadDoc('');
 	if (active) {
 		const raw = readConfig(config.kometaConfigPath);
 		exists = raw !== null;
 		if (raw !== null) {
-			const doc = loadDoc(raw);
-			if (doc.errors.length) parseError = doc.errors[0].message;
+			const parsed = loadDoc(raw);
+			if (parsed.errors.length) parseError = parsed.errors[0].message;
+			else doc = parsed;
 		}
 	}
+
+	const cached = await getCachedLibraries();
+	const metadataRef = metadataFilePath(config);
+
+	// Connector current values — never expose secret values, only "is set".
+	const connectionValues: Record<string, Record<string, string>> = {};
+	const connectionSecretsSet: Record<string, string[]> = {};
+	for (const c of CONNECTORS) {
+		const cur = readScalarMap(doc, [c.section]);
+		const secrets = secretFieldKeys(c.section);
+		const vals: Record<string, string> = {};
+		const setSecrets: string[] = [];
+		for (const [k, v] of Object.entries(cur)) {
+			if (secrets.has(k)) {
+				if (v !== '') setSecrets.push(k);
+			} else {
+				vals[k] = v;
+			}
+		}
+		connectionValues[c.section] = vals;
+		connectionSecretsSet[c.section] = setSecrets;
+	}
+
+	// Per-library current state from the file.
+	const libraryState: KometaTabState['libraryState'] = {};
+	for (const name of readSectionKeys(doc, ['libraries'])) {
+		libraryState[name] = {
+			collections: readDefaultList(doc, name, 'collection_files'),
+			overlays: readDefaultList(doc, name, 'overlay_files'),
+			operations: readScalarMap(doc, ['libraries', name, 'operations']),
+			settings: readScalarMap(doc, ['libraries', name, 'settings']),
+			hasMetadata: readFileList(doc, name).includes(metadataRef)
+		};
+	}
+
+	// Consistency against the file's current enabled features.
+	const currentPlan = buildPlan({
+		creds: { plexUrl: config.plexUrl, plexToken: config.plexToken, tmdbKey: config.tmdbKey },
+		metadataFile: metadataRef,
+		libraries: Object.entries(libraryState).map(([name, s]) => ({
+			name,
+			defaults: s.collections,
+			overlays: s.overlays,
+			metadata: false
+		}))
+	});
+
 	return {
 		active,
 		mode: config.kometaConfigMode,
 		configPath: config.kometaConfigPath,
 		resolvedConfigPath: active ? resolve(config.kometaConfigPath) : '',
 		configPathRelative: active && !config.kometaConfigPath.startsWith('/'),
-		metadataFile: metadataFilePath(config),
+		metadataFile: metadataRef,
 		exists,
 		parseError,
 		managedLibraries: await getKometaManagedLibraries(),
 		defaultCollections: await getKometaDefaultCollections(),
 		managedSettings: await getKometaManagedSettings(),
 		catalog: DEFAULT_COLLECTION_GROUPS,
-		managedSettingDefs: MANAGED_SETTINGS
+		managedSettingDefs: MANAGED_SETTINGS,
+		connectorCatalog: CONNECTORS,
+		overlayCatalog: OVERLAY_GROUPS,
+		operationCatalog: OPERATIONS,
+		availableLibraries: cached.map((l) => ({ key: l.key, title: l.title, type: l.type })),
+		connectionValues,
+		connectionSecretsSet,
+		libraryState,
+		globals: {
+			settings: readScalarMap(doc, ['settings']),
+			webhooks: readScalarMap(doc, ['webhooks'])
+		},
+		backups: active && exists ? listBackups(config.kometaConfigPath) : [],
+		consistency: checkConsistency(currentPlan, doc)
 	};
 }
 
@@ -158,7 +292,8 @@ function inactiveResult(): SyncResult {
 		parseError: null,
 		changes: [],
 		warnings: [],
-		dropped: []
+		dropped: [],
+		consistency: []
 	};
 }
 
@@ -172,7 +307,8 @@ function parseErrorResult(mode: KometaConfigMode, message: string): SyncResult {
 		parseError: message,
 		changes: [],
 		warnings: [],
-		dropped: []
+		dropped: [],
+		consistency: []
 	};
 }
 
@@ -227,7 +363,8 @@ export async function previewSync(sel: SyncSelectionInput): Promise<SyncResult> 
 		parseError: null,
 		changes: redactSecrets(out.res.changes),
 		warnings: out.res.warnings,
-		dropped: out.dropped
+		dropped: out.dropped,
+		consistency: checkConsistency(plan, raw !== null ? loadDoc(raw) : loadDoc(''))
 	};
 }
 
@@ -277,7 +414,60 @@ export async function runSync(sel: SyncSelectionInput): Promise<SyncResult> {
 			backup: backup !== null,
 			changes: redactSecrets(out.res.changes),
 			warnings: out.res.warnings,
-			dropped: out.dropped
+			dropped: out.dropped,
+			consistency: checkConsistency(plan, raw !== null ? loadDoc(raw) : loadDoc(''))
 		};
 	});
+}
+
+/** Result of a raw-editor save or a backup restore. */
+export interface RawResult {
+	ok: boolean;
+	active?: boolean;
+	parseError: string | null;
+	backup?: boolean;
+}
+
+/** Read the current raw config text (for the raw editor). */
+export async function loadRaw(): Promise<{ active: boolean; text: string }> {
+	const config = await resolveConfig();
+	if (!config.kometaConfigPath) return { active: false, text: '' };
+	return { active: true, text: readConfig(config.kometaConfigPath) ?? '' };
+}
+
+/** Validate and save raw config text (atomic write + backup). */
+export async function saveRaw(text: string): Promise<RawResult> {
+	const config = await resolveConfig();
+	if (!config.kometaConfigPath) return { ok: false, active: false, parseError: null };
+	return withConfigLock(config.kometaConfigPath, async () => {
+		const doc = loadDoc(text);
+		if (doc.errors.length) return { ok: false, active: true, parseError: doc.errors[0].message };
+		const { backup } = writeConfigAtomic(config.kometaConfigPath, text, new Date().toISOString());
+		await logEvent('info', 'kometa', 'Saved Kometa config.yml (raw editor)', {
+			backup: backup !== null
+		});
+		return { ok: true, active: true, parseError: null, backup: backup !== null };
+	});
+}
+
+/** Restore a named backup over the current config. */
+export async function restoreConfig(name: string): Promise<RawResult> {
+	const config = await resolveConfig();
+	if (!config.kometaConfigPath) return { ok: false, active: false, parseError: null };
+	return withConfigLock(config.kometaConfigPath, async () => {
+		try {
+			restoreBackup(config.kometaConfigPath, name, new Date().toISOString());
+		} catch (e) {
+			return { ok: false, active: true, parseError: e instanceof Error ? e.message : String(e) };
+		}
+		await logEvent('info', 'kometa', 'Restored Kometa config.yml backup', { name });
+		return { ok: true, active: true, parseError: null, backup: true };
+	});
+}
+
+/** List backups for the configured file (for a refresh). */
+export async function getBackups(): Promise<BackupInfo[]> {
+	const config = await resolveConfig();
+	if (!config.kometaConfigPath) return [];
+	return listBackups(config.kometaConfigPath);
 }

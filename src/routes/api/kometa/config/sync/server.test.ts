@@ -31,7 +31,7 @@ describe('POST /api/kometa/config/sync', () => {
 		expect(res.status).toBe(200);
 		const body = (await res.json()) as { backup: boolean };
 		expect(body.backup).toBe(true);
-		expect(h.runSync).toHaveBeenCalledWith({ libraries: ['1'], defaults: {}, settings: {} });
+		expect(h.runSync).toHaveBeenCalledWith(expect.objectContaining({ libraries: ['1'] }));
 	});
 
 	it('surfaces a parse error from runSync without throwing', async () => {

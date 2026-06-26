@@ -30,10 +30,8 @@ describe('POST /api/kometa/config/preview', () => {
 		const body = (await res.json()) as { changes: { path: string; after: string }[] };
 		expect(body.changes[0].after).toBe('***');
 		// preview delegates to previewSync with the parsed selection (never runSync).
-		expect(h.previewSync).toHaveBeenCalledWith({
-			libraries: ['1'],
-			defaults: { '1': ['genre'] },
-			settings: {}
-		});
+		expect(h.previewSync).toHaveBeenCalledWith(
+			expect.objectContaining({ libraries: ['1'], defaults: { '1': ['genre'] } })
+		);
 	});
 });

@@ -603,6 +603,20 @@ export function readDefaultList(doc: Document, libName: string, listKey: string)
 	return out;
 }
 
+/** Read the `- file: <path>` entries from a library's `metadata_files`. */
+export function readFileList(doc: Document, libName: string): string[] {
+	const seq = nodeAt(doc, ['libraries', libName, 'metadata_files']);
+	if (!isSeq(seq)) return [];
+	const out: string[] = [];
+	for (const it of seq.items) {
+		if (isMap(it)) {
+			const f = it.get('file');
+			if (typeof f === 'string') out.push(f);
+		}
+	}
+	return out;
+}
+
 /** A library feature (chart/overlay) that needs a connector that isn't configured. */
 export interface ConsistencyWarning {
 	library: string;
