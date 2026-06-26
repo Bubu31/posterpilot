@@ -157,6 +157,7 @@
 	"settings_tmdb_key_placeholder_unset": "TMDB credential",
 	"settings_kometa_dir": "Kometa assets directory",
 	"settings_kometa_dir_hint": "Where Kometa assets are written.",
+	"settings_kometa_manager_pointer": "Manage Kometa's own config.yml in the",
 	"settings_delay": "Delay (ms)",
 	"settings_concurrency": "Concurrency",
 	"settings_cache_days": "Cache (days)",

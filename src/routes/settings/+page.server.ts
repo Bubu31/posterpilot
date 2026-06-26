@@ -1,7 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { getCachedLibraries, publicConfig } from '$lib/server/config';
 import { listEvents } from '$lib/server/queries';
-import { loadKometaState } from '$lib/server/kometa/sync';
 
 const EVENTS_PAGE_SIZE = 50;
 
@@ -21,7 +20,6 @@ export const load: PageServerLoad = async () => {
 		config: await publicConfig(),
 		sections,
 		events,
-		eventsNextCursor,
-		kometa: await loadKometaState()
+		eventsNextCursor
 	};
 };

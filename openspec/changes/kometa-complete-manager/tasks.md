@@ -16,40 +16,40 @@
 
 ## 3. Path co-location
 
-- [ ] 3.1 Derive the metadata file location from `dirname(kometaConfigPath)`; default `metadata_files` value to the Kometa-relative basename `posterpilot.yml` (+ optional relative-prefix override)
-- [ ] 3.2 Write `posterpilot.yml` into the config dir when config sync is configured (reconcile with the existing `KOMETA_ASSETS_DIR` export so there is exactly one file)
-- [ ] 3.3 Migration: a prior non-co-located metadata entry is removed and replaced on the next sync (shown in preview)
-- [ ] 3.4 Remove `kometaMetadataPath` from `AppConfig`/`ENV_MAP`/`WRITABLE_KEYS`/`resolveConfig`/`PublicConfig`; update tests
+- [x] 3.1 Derive the metadata file location from `dirname(kometaConfigPath)`; default `metadata_files` value to the Kometa-relative basename `posterpilot.yml` (+ optional relative-prefix override)
+- [x] 3.2 Write `posterpilot.yml` into the config dir when config sync is configured (reconcile with the existing `KOMETA_ASSETS_DIR` export so there is exactly one file)
+- [x] 3.3 Migration: a prior non-co-located metadata entry is removed and replaced on the next sync (shown in preview)
+- [x] 3.4 Remove `kometaMetadataPath` from `AppConfig`/`ENV_MAP`/`WRITABLE_KEYS`/`resolveConfig`/`PublicConfig`; update tests
 
 ## 4. Orchestration & endpoints
 
-- [ ] 4.1 Extend `sync.ts` `planFromSelections`/`loadKometaState` to cover connectors, overlays, operations, per-library settings, globals; include consistency warnings in results
-- [ ] 4.2 Add `listBackups(path)` + `restoreBackup(path, name, stamp)` to `config-io.ts` (restore backs up current first); unit-test against a temp dir
-- [ ] 4.3 `POST /api/kometa/config/raw` — validate + diff + atomic write (+ backup) of full text; `GET`/`POST` for backups list + restore
-- [ ] 4.4 Re-baseline the managed snapshot after a raw save so structured + raw stay consistent
-- [ ] 4.5 Endpoint tests (delegation, redaction, parse-error, restore writes-with-backup)
+- [x] 4.1 Extend `sync.ts` `planFromSelections`/`loadKometaState` to cover connectors, overlays, operations, per-library settings, globals; include consistency warnings in results
+- [x] 4.2 Add `listBackups(path)` + `restoreBackup(path, name, stamp)` to `config-io.ts` (restore backs up current first); unit-test against a temp dir
+- [x] 4.3 `POST /api/kometa/config/raw` — validate + diff + atomic write (+ backup) of full text; `GET`/`POST` for backups list + restore
+- [x] 4.4 Re-baseline the managed snapshot after a raw save so structured + raw stay consistent
+- [x] 4.5 Endpoint tests (delegation, redaction, parse-error, restore writes-with-backup)
 
 ## 5. Dedicated `/kometa` page + spotlight
 
-- [ ] 5.1 New route `src/routes/kometa/+page.svelte` + `+page.server.ts` (load: full Kometa state + catalogs + a spotlight backdrop candidate)
-- [ ] 5.2 Add the Kometa entry to the main nav
-- [ ] 5.3 Spotlight hero (reuse the library spotlight pattern): backdrop + title + live status overlay; `prefers-reduced-motion` honored; static fallback when no backdrop
-- [ ] 5.4 Header: config path (+ resolved-path display), mode toggle, status, Preview/Sync actions
-- [ ] 5.5 Sub-sections — **Connections** (catalog-driven forms, secrets masked, test where applicable), **Libraries** (collections + overlays + operations + settings + metadata per library), **Settings & Webhooks**
-- [ ] 5.6 **Raw** editor (monospace textarea, validate, diff, save) and **Backups** (list + restore with confirm)
-- [ ] 5.7 Surface consistency/anchor warnings, dropped-keys (own mode), and the secrets-on-disk notice in the preview
+- [x] 5.1 New route `src/routes/kometa/+page.svelte` + `+page.server.ts` (load: full Kometa state + catalogs + a spotlight backdrop candidate)
+- [x] 5.2 Add the Kometa entry to the main nav
+- [x] 5.3 Spotlight hero (reuse the library spotlight pattern): backdrop + title + live status overlay; `prefers-reduced-motion` honored; static fallback when no backdrop
+- [x] 5.4 Header: config path (+ resolved-path display), mode toggle, status, Preview/Sync actions
+- [x] 5.5 Sub-sections — **Connections** (catalog-driven forms, secrets masked, test where applicable), **Libraries** (collections + overlays + operations + settings + metadata per library), **Settings & Webhooks**
+- [x] 5.6 **Raw** editor (monospace textarea, validate, diff, save) and **Backups** (list + restore with confirm)
+- [x] 5.7 Surface consistency/anchor warnings, dropped-keys (own mode), and the secrets-on-disk notice in the preview
 
 ## 6. Remove the Settings Kometa tab
 
-- [ ] 6.1 Remove the `kometa` tab from `src/routes/settings/+page.svelte`; drop the now-unused Kometa state/handlers there
-- [ ] 6.2 Add a one-line pointer from Settings to `/kometa`
-- [ ] 6.3 Keep the config-path/mode persistence working through `/api/settings` (now driven from the `/kometa` header)
+- [x] 6.1 Remove the `kometa` tab from `src/routes/settings/+page.svelte`; drop the now-unused Kometa state/handlers there
+- [x] 6.2 Add a one-line pointer from Settings to `/kometa`
+- [x] 6.3 Keep the config-path/mode persistence working through `/api/settings` (now driven from the `/kometa` header)
 
 ## 7. Internationalization
 
-- [ ] 7.1 Add all new manager-page message keys to `messages/en.json`
-- [ ] 7.2 Mirror across `es.json`, `zh.json`, `ja.json`, `pt-BR.json` at full parity; remove keys orphaned by the tab removal
-- [ ] 7.3 `m.*` accessors; `bun run check` compiles Paraglide with no missing keys
+- [x] 7.1 Add all new manager-page message keys to `messages/en.json`
+- [x] 7.2 Mirror across `es.json`, `zh.json`, `ja.json`, `pt-BR.json` at full parity; remove keys orphaned by the tab removal
+- [x] 7.3 `m.*` accessors; `bun run check` compiles Paraglide with no missing keys
 
 ## 8. Documentation
 
