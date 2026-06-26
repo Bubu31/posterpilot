@@ -80,6 +80,47 @@ export function pruneBackups(dir: string, configName: string, keep: number): voi
 	}
 }
 
+/** A backup file PosterPilot has written for the config. */
+export interface BackupInfo {
+	name: string;
+	stamp: string;
+}
+
+/** List backups for a config file, newest first. */
+export function listBackups(path: string): BackupInfo[] {
+	const dir = dirname(path);
+	const prefix = `${basename(path)}${BACKUP_INFIX}`;
+	let entries: string[];
+	try {
+		entries = readdirSync(dir);
+	} catch {
+		return [];
+	}
+	return entries
+		.filter((e) => e.startsWith(prefix))
+		.map((e) => ({ name: e, stamp: e.slice(prefix.length) }))
+		.sort((a, b) => b.stamp.localeCompare(a.stamp));
+}
+
+/**
+ * Restore a named backup over the current config, backing up the current file
+ * first. The backup name is validated to belong to this config (no traversal).
+ */
+export function restoreBackup(
+	path: string,
+	name: string,
+	stamp: string
+): { backup: string | null } {
+	const prefix = `${basename(path)}${BACKUP_INFIX}`;
+	if (!name.startsWith(prefix) || name.includes('/') || name.includes('..')) {
+		throw new Error('Invalid backup name');
+	}
+	const src = join(dirname(path), name);
+	if (!existsSync(src)) throw new Error('Backup not found');
+	const content = readFileSync(src, 'utf8');
+	return writeConfigAtomic(path, content, stamp);
+}
+
 // ── Single-flight lock (per absolute path) ────────────────────────────────────
 // Serializes read-modify-write cycles so two concurrent syncs can't interleave on
 // the same file. In-process only (the app is a single container).

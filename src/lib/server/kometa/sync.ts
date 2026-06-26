@@ -80,10 +80,18 @@ export interface SyncResult {
 	scaffolded?: boolean;
 }
 
-/** Kometa-visible path to PosterPilot's metadata file, as written into config.yml. */
-function metadataFilePath(config: AppConfig): string {
-	const base = config.kometaMetadataPath || config.kometaAssetsDir;
-	return posix.join(base, DEFAULT_FILENAME);
+/**
+ * The `metadata_files` `file:` value written into config.yml. PosterPilot writes
+ * `posterpilot.yml` into the config-file's own directory, so the reference is the
+ * bare basename — Kometa resolves it relative to its config directory.
+ */
+function metadataFilePath(_config: AppConfig): string {
+	return DEFAULT_FILENAME;
+}
+
+/** Absolute on-disk directory where posterpilot.yml is written (the config dir). */
+export function kometaOutputDir(config: AppConfig): string {
+	return config.kometaConfigPath ? posix.dirname(config.kometaConfigPath) : config.kometaAssetsDir;
 }
 
 /** Build the desired-state plan from the user's selections + resolved config. */

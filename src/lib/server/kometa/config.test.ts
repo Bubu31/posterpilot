@@ -5,6 +5,9 @@ import {
 	buildPlan,
 	checkConsistency,
 	loadDoc,
+	readDefaultList,
+	readScalarMap,
+	readSectionKeys,
 	redactSecrets,
 	scaffoldDoc,
 	serialize,
@@ -219,6 +222,23 @@ describe('applyPlan — generalized sections', () => {
 		});
 		const out2 = serialize(applyPlan(loadDoc(serialize(first.doc)), p2, first.nextSnapshot).doc);
 		expect(out2).not.toContain('mass_genre_update');
+	});
+});
+
+describe('readers', () => {
+	const DOC = loadDoc(
+		'plex:\n  url: http://p\n  token: t\nlibraries:\n  Movies:\n    collection_files:\n      - default: genre\n    overlay_files:\n      - default: ribbon\n'
+	);
+	it('readScalarMap reads a section', () => {
+		expect(readScalarMap(DOC, ['plex'])).toEqual({ url: 'http://p', token: 't' });
+		expect(readScalarMap(DOC, ['nope'])).toEqual({});
+	});
+	it('readSectionKeys lists library names', () => {
+		expect(readSectionKeys(DOC, ['libraries'])).toEqual(['Movies']);
+	});
+	it('readDefaultList reads collection/overlay defaults', () => {
+		expect(readDefaultList(DOC, 'Movies', 'collection_files')).toEqual(['genre']);
+		expect(readDefaultList(DOC, 'Movies', 'overlay_files')).toEqual(['ribbon']);
 	});
 });
 

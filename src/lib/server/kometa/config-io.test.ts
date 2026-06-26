@@ -2,7 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { pruneBackups, readConfig, withConfigLock, writeConfigAtomic } from './config-io';
+import {
+	listBackups,
+	pruneBackups,
+	readConfig,
+	restoreBackup,
+	withConfigLock,
+	writeConfigAtomic
+} from './config-io';
 
 const DIR = join(tmpdir(), `kometa-io-test-${process.pid}`);
 const FILE = join(DIR, 'config.yml');
@@ -56,6 +63,28 @@ describe('pruneBackups', () => {
 			'config.yml.posterpilot-bak-2026-03-01',
 			'config.yml.posterpilot-bak-2026-04-01'
 		]);
+	});
+});
+
+describe('listBackups / restoreBackup', () => {
+	it('lists backups newest-first and restores one (backing up current)', () => {
+		writeFileSync(FILE, 'v1\n', 'utf8');
+		writeConfigAtomic(FILE, 'v2\n', '2026-01-01T00-00-00Z'); // backup of v1
+		writeConfigAtomic(FILE, 'v3\n', '2026-02-01T00-00-00Z'); // backup of v2
+		const backups = listBackups(FILE);
+		expect(backups.length).toBe(2);
+		expect(backups[0].stamp > backups[1].stamp).toBe(true); // newest first
+
+		const v1Backup = backups[1].name; // oldest = the v1 snapshot
+		const { backup } = restoreBackup(FILE, v1Backup, '2026-03-01T00-00-00Z');
+		expect(readFileSync(FILE, 'utf8')).toBe('v1\n'); // restored
+		expect(readFileSync(backup as string, 'utf8')).toBe('v3\n'); // current was backed up first
+	});
+
+	it('rejects a backup name that escapes the config dir', () => {
+		writeFileSync(FILE, 'x\n', 'utf8');
+		expect(() => restoreBackup(FILE, '../../etc/passwd', 's')).toThrow();
+		expect(() => restoreBackup(FILE, 'unrelated.bak', 's')).toThrow();
 	});
 });
 

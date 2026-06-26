@@ -566,6 +566,43 @@ export function topLevelKeys(doc: Document): string[] {
 	return c.items.map((p) => (isScalar(p.key) ? String(p.key.value) : String(p.key)));
 }
 
+function keyName(pairKey: unknown): string {
+	return isScalar(pairKey) ? String(pairKey.value) : String(pairKey);
+}
+
+/** The mapping keys present at a path (e.g. library names under `libraries`). */
+export function readSectionKeys(doc: Document, path: (string | number)[]): string[] {
+	const node = nodeAt(doc, path);
+	if (!isMap(node)) return [];
+	return node.items.map((p) => keyName(p.key));
+}
+
+/** Read the current scalar key→value map at a path (skips nested maps/seqs). */
+export function readScalarMap(doc: Document, path: (string | number)[]): Record<string, string> {
+	const node = nodeAt(doc, path);
+	if (!isMap(node)) return {};
+	const out: Record<string, string> = {};
+	for (const pair of node.items) {
+		const v = pair.value;
+		if (isScalar(v) && v.value != null) out[keyName(pair.key)] = String(v.value);
+	}
+	return out;
+}
+
+/** Read the `- default: <name>` entries from a library's file list. */
+export function readDefaultList(doc: Document, libName: string, listKey: string): string[] {
+	const seq = nodeAt(doc, ['libraries', libName, listKey]);
+	if (!isSeq(seq)) return [];
+	const out: string[] = [];
+	for (const it of seq.items) {
+		if (isMap(it)) {
+			const d = it.get('default');
+			if (typeof d === 'string') out.push(d);
+		}
+	}
+	return out;
+}
+
 /** A library feature (chart/overlay) that needs a connector that isn't configured. */
 export interface ConsistencyWarning {
 	library: string;

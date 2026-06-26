@@ -175,7 +175,6 @@
 
 	// ── Kometa config-sync tab ─────────────────────────────────────────────────
 	let kometaConfigPath = $state(data.config.kometaConfigPath);
-	let kometaMetadataPath = $state(data.config.kometaMetadataPath);
 	let kometaMode = $state<'merge' | 'own'>(data.config.kometaConfigMode);
 	const kometaLibs = new SvelteSet<string>(data.kometa.managedLibraries);
 	// Per-library enabled default sets, keyed by section key.
@@ -354,7 +353,6 @@
 				// Kometa config-sync paths (saved through the shared Save; the preview/sync
 				// actions below use these but do not persist them themselves).
 				kometaConfigPath,
-				kometaMetadataPath,
 				kometaConfigMode: kometaMode,
 				// type=number binds yield numbers; the settings API only persists string
 				// values, so stringify these before sending.
@@ -768,24 +766,9 @@
 			{/if}
 		</div>
 
-		<div>
-			<label for="kometaMetadataPath" class="mb-1 block text-sm font-medium"
-				>{m.kometa_metadata_path()}</label
-			>
-			<input
-				id="kometaMetadataPath"
-				bind:value={kometaMetadataPath}
-				disabled={env.kometaMetadataPath}
-				class="input w-full disabled:opacity-50"
-			/>
-			<p class="mt-1 text-xs text-neutral-400">{m.kometa_metadata_path_hint()}</p>
-			<p class="mt-1 text-xs text-neutral-500">
-				{m.kometa_metadata_resolved({ path: data.kometa.metadataFile })}
-			</p>
-			{#if env.kometaMetadataPath}<p class="mt-1 text-xs text-amber-400">
-					{m.settings_set_from_env()}
-				</p>{/if}
-		</div>
+		<p class="text-xs text-neutral-500">
+			{m.kometa_metadata_resolved({ path: data.kometa.metadataFile })}
+		</p>
 
 		<div>
 			<label for="kometaMode" class="mb-1 block text-sm font-medium">{m.kometa_mode()}</label>

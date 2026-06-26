@@ -39,12 +39,6 @@ export interface AppConfig {
 	 * means the config-sync feature is off.
 	 */
 	kometaConfigPath: string;
-	/**
-	 * Base path at which **Kometa** sees PosterPilot's `posterpilot.yml` metadata file,
-	 * used for the `metadata_files` wiring written into `config.yml`. Defaults to
-	 * `kometaAssetsDir`; override when PosterPilot and Kometa mount the dir differently.
-	 */
-	kometaMetadataPath: string;
 	/** Whether PosterPilot surgically merges (`merge`) or fully owns (`own`) config.yml. */
 	kometaConfigMode: KometaConfigMode;
 	mediuxDelayMs: number;
@@ -95,7 +89,6 @@ const ENV_MAP: Record<ConfigKey, string> = {
 	tmdbKey: 'TMDB_KEY',
 	kometaAssetsDir: 'KOMETA_ASSETS_DIR',
 	kometaConfigPath: 'KOMETA_CONFIG_PATH',
-	kometaMetadataPath: 'KOMETA_METADATA_PATH',
 	kometaConfigMode: 'KOMETA_CONFIG_MODE',
 	mediuxDelayMs: 'MEDIUX_REQUEST_DELAY_MS',
 	mediuxConcurrency: 'MEDIUX_CONCURRENCY',
@@ -148,7 +141,6 @@ export const WRITABLE_KEYS: ConfigKey[] = [
 	'tmdbKey',
 	'kometaAssetsDir',
 	'kometaConfigPath',
-	'kometaMetadataPath',
 	'kometaConfigMode',
 	'mediuxDelayMs',
 	'mediuxConcurrency',
@@ -229,9 +221,6 @@ export async function resolveConfig(): Promise<AppConfig> {
 		tmdbKey: rawValue('tmdbKey', persisted) ?? null,
 		kometaAssetsDir,
 		kometaConfigPath: rawValue('kometaConfigPath', persisted) ?? '',
-		// Defaults to the assets dir so the common single-mount case is zero-config; an
-		// explicit value covers split PosterPilot/Kometa mounts.
-		kometaMetadataPath: rawValue('kometaMetadataPath', persisted) ?? kometaAssetsDir,
 		kometaConfigMode: rawValue('kometaConfigMode', persisted) === 'own' ? 'own' : 'merge',
 		mediuxDelayMs: toInt(rawValue('mediuxDelayMs', persisted), DEFAULTS.mediuxDelayMs),
 		mediuxConcurrency: toInt(rawValue('mediuxConcurrency', persisted), DEFAULTS.mediuxConcurrency),
@@ -484,7 +473,6 @@ export interface PublicConfig {
 	tmdbKeySet: boolean;
 	kometaAssetsDir: string;
 	kometaConfigPath: string;
-	kometaMetadataPath: string;
 	kometaConfigMode: KometaConfigMode;
 	mediuxDelayMs: number;
 	mediuxConcurrency: number;
@@ -520,7 +508,6 @@ export async function publicConfig(): Promise<PublicConfig> {
 		tmdbKeySet: c.tmdbKey !== null,
 		kometaAssetsDir: c.kometaAssetsDir,
 		kometaConfigPath: c.kometaConfigPath,
-		kometaMetadataPath: c.kometaMetadataPath,
 		kometaConfigMode: c.kometaConfigMode,
 		mediuxDelayMs: c.mediuxDelayMs,
 		mediuxConcurrency: c.mediuxConcurrency,

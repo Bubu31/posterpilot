@@ -61,10 +61,9 @@ beforeEach(() => {
 });
 
 describe('resolveConfig — Kometa keys', () => {
-	it('defaults: config path empty (off), metadata path falls back to assets dir, mode merge', async () => {
+	it('defaults: config path empty (off), mode merge', async () => {
 		const c = await resolveConfig();
 		expect(c.kometaConfigPath).toBe('');
-		expect(c.kometaMetadataPath).toBe(c.kometaAssetsDir);
 		expect(c.kometaConfigMode).toBe('merge');
 	});
 
