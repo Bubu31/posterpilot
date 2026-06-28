@@ -119,6 +119,78 @@ describe('mergeMetadata', () => {
 	});
 });
 
+describe('seasons and episodes', () => {
+	it('encodes season posters and episode title cards (no season background)', () => {
+		const items: KometaItemInput[] = [
+			{
+				tmdbId: '1399',
+				title: 'Game of Thrones',
+				posterUrl: 'https://example.test/p/show.jpg',
+				seasons: [
+					{
+						season: 1,
+						posterUrl: 'https://example.test/s1.jpg',
+						episodes: [
+							{ episode: 1, url: 'https://example.test/s1e1.jpg' },
+							{ episode: 2, url: 'https://example.test/s1e2.jpg' }
+						]
+					},
+					{ season: 2, posterUrl: 'https://example.test/s2.jpg' }
+				]
+			}
+		];
+
+		const obj = buildMetadataObject(items) as { metadata: Record<string, { seasons: unknown }> };
+
+		expect(obj.metadata['1399']).toEqual({
+			url_poster: 'https://example.test/p/show.jpg',
+			seasons: {
+				1: {
+					url_poster: 'https://example.test/s1.jpg',
+					episodes: {
+						1: { url_poster: 'https://example.test/s1e1.jpg' },
+						2: { url_poster: 'https://example.test/s1e2.jpg' }
+					}
+				},
+				2: { url_poster: 'https://example.test/s2.jpg' }
+			}
+		});
+	});
+
+	it('emits an episodes-only season (no season poster)', () => {
+		const obj = buildMetadataObject([
+			{
+				tmdbId: '1',
+				title: 'Show',
+				seasons: [{ season: 3, episodes: [{ episode: 5, url: 'https://example.test/s3e5.jpg' }] }]
+			}
+		]) as { metadata: Record<string, unknown> };
+
+		expect(obj.metadata['1']).toEqual({
+			seasons: { 3: { episodes: { 5: { url_poster: 'https://example.test/s3e5.jpg' } } } }
+		});
+	});
+
+	it('omits the seasons key when no season carries artwork', () => {
+		const obj = buildMetadataObject([
+			{ tmdbId: '1', title: 'Show', posterUrl: 'https://example.test/p.jpg', seasons: [] }
+		]) as { metadata: Record<string, unknown> };
+
+		expect(obj.metadata['1']).toEqual({ url_poster: 'https://example.test/p.jpg' });
+	});
+
+	it('round-trips nested seasons through the yaml parser', () => {
+		const obj = buildMetadataObject([
+			{
+				tmdbId: '1399',
+				title: 'GoT',
+				seasons: [{ season: 1, posterUrl: 'https://example.test/s1.jpg' }]
+			}
+		]);
+		expect(parse(toYaml(obj))).toEqual(obj);
+	});
+});
+
 describe('toYaml', () => {
 	it('round-trips buildMetadataObject output through the yaml parser', () => {
 		const items: KometaItemInput[] = [
