@@ -29,7 +29,8 @@ export const POST: RequestHandler = async ({ params, request }) => {
 		backgroundUrl,
 		method: body.method ?? config.defaultApplyMethod,
 		config,
-		dryRun: Boolean(body.dryRun)
+		// Only an explicit `true` enables dry-run — never coerce (e.g. the string "false").
+		dryRun: body.dryRun === true
 	});
 	return json({ outcomes });
 };

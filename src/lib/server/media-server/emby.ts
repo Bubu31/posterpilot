@@ -32,6 +32,20 @@ import { version } from '$lib/version';
 export type EmbyFlavor = 'jellyfin' | 'emby';
 
 /**
+ * A login failure that carries the HTTP status the API route should return, so
+ * invalid credentials (401) are distinguishable from upstream/network errors (502).
+ */
+export class MediaServerLoginError extends Error {
+	constructor(
+		message: string,
+		readonly status: number
+	) {
+		super(message);
+		this.name = 'MediaServerLoginError';
+	}
+}
+
+/**
  * Exchange a username + password for an access token via `/Users/AuthenticateByName`,
  * so users don't have to hunt for an API key. The pre-token request still needs a
  * client-identification header: Jellyfin reads `Authorization: MediaBrowser ...`,
@@ -64,16 +78,24 @@ export async function loginByName(
 		});
 	} catch (err) {
 		const reason = err instanceof Error ? err.message : String(err);
-		throw new Error(`Unreachable: could not connect to ${label} (${reason}).`);
+		throw new MediaServerLoginError(`Unreachable: could not connect to ${label} (${reason}).`, 502);
 	}
 	if (res.status === 401 || res.status === 403) {
-		throw new Error(`Unauthorized: ${label} rejected the username or password.`);
+		throw new MediaServerLoginError(
+			`Unauthorized: ${label} rejected the username or password.`,
+			401
+		);
 	}
 	if (!res.ok) {
-		throw new Error(`${label} returned HTTP ${res.status} ${res.statusText} during login.`);
+		throw new MediaServerLoginError(
+			`${label} returned HTTP ${res.status} ${res.statusText} during login.`,
+			502
+		);
 	}
 	const result = parseAuthResult((await res.json()) as Parameters<typeof parseAuthResult>[0]);
-	if (!result) throw new Error(`${label} login did not return an access token.`);
+	if (!result) {
+		throw new MediaServerLoginError(`${label} login did not return an access token.`, 502);
+	}
 	return result;
 }
 

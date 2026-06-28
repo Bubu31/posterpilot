@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { saveSettings } from '$lib/server/config';
-import { loginByName } from '$lib/server/media-server/emby';
+import { loginByName, MediaServerLoginError } from '$lib/server/media-server/emby';
 import { logEvent } from '$lib/server/events';
 
 /**
@@ -44,6 +44,8 @@ export const POST: RequestHandler = async ({ request }) => {
 		await logEvent('info', 'settings', `Logged in to ${flavor}`, { user: result.userName });
 		return json({ ok: true, userName: result.userName });
 	} catch (e) {
-		return json({ error: e instanceof Error ? e.message : String(e) }, { status: 502 });
+		// 401 for rejected credentials, 502 for upstream/network failures.
+		const status = e instanceof MediaServerLoginError ? e.status : 502;
+		return json({ error: e instanceof Error ? e.message : String(e) }, { status });
 	}
 };

@@ -147,24 +147,25 @@
 				children.push({ kind: 'title_card', season: c.season, episode: c.episode, url: c.url });
 			}
 		}
-		if (showChanged) await persistSelection();
-		if (children.length) {
-			// Suggestions are best-effort: only reflect them locally once the server has
-			// persisted them, and never let a failure surface as an unhandled rejection.
-			try {
+		// Suggestions are best-effort: persist is fire-and-forget and must never surface
+		// as an unhandled rejection (callers invoke this via `void applySuggestions()`).
+		try {
+			if (showChanged) await persistSelection();
+			if (children.length) {
 				const res = await fetch(`/api/items/${data.item.id}/select`, {
 					method: 'POST',
 					headers: jsonHeaders,
 					body: JSON.stringify({ children })
 				});
+				// Only reflect the children locally once the server has persisted them.
 				if (res.ok) {
 					const add: Record<string, string> = {};
 					for (const c of children) add[childKey(c.kind, c.season, c.episode)] = c.url;
 					childSel = { ...childSel, ...add };
 				}
-			} catch {
-				// ignore — the user can still pick artwork manually
 			}
+		} catch {
+			// ignore — the user can still pick artwork manually
 		}
 	}
 
