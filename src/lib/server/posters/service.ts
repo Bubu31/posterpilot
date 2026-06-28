@@ -171,7 +171,11 @@ export async function selectChild(
 	}
 }
 
-/** Stage many child slots in one call (used by "use this set"). */
+/**
+ * Stage many child slots in one call (used by "use this set"). Runs every per-slot
+ * delete+insert inside a single transaction so the bulk stage commits once and is
+ * atomic, rather than issuing two statements per slot across separate commits.
+ */
 export async function selectChildrenBulk(
 	itemId: number,
 	slots: {
@@ -181,9 +185,33 @@ export async function selectChildrenBulk(
 		url: string;
 	}[]
 ): Promise<void> {
-	for (const s of slots) {
-		await selectChild(itemId, { kind: s.kind, season: s.season, episode: s.episode }, s.url);
-	}
+	if (!slots.length) return;
+	await db.transaction(async (tx) => {
+		for (const s of slots) {
+			const episodeMatch =
+				s.episode === null
+					? isNull(childSelections.episode)
+					: eq(childSelections.episode, s.episode);
+			await tx
+				.delete(childSelections)
+				.where(
+					and(
+						eq(childSelections.mediaItemId, itemId),
+						eq(childSelections.kind, s.kind),
+						eq(childSelections.season, s.season),
+						episodeMatch
+					)
+				);
+			await tx.insert(childSelections).values({
+				mediaItemId: itemId,
+				kind: s.kind,
+				season: s.season,
+				episode: s.episode,
+				url: s.url,
+				updatedAt: new Date()
+			});
+		}
+	});
 }
 
 /** Read an item's staged child selections as pure slots for apply/UI hydration. */
@@ -553,6 +581,8 @@ export async function revertItem(
 			await server.applyPosterUrl(item.ratingKey, item.currentPosterUrl);
 		}
 		await server.lockField(item.ratingKey, 'poster', false);
+		// Apply can lock the background too (incl. background-only applies), so unlock it.
+		await server.lockField(item.ratingKey, 'background', false);
 		await db.delete(appliedPosters).where(eq(appliedPosters.mediaItemId, item.id));
 		await db.delete(childSelections).where(eq(childSelections.mediaItemId, item.id));
 		await db

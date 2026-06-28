@@ -144,11 +144,39 @@ export function mergeMetadata(
 			: {};
 
 	for (const item of items) {
-		metadata[item.tmdbId] = buildEntry(item);
+		metadata[item.tmdbId] = mergeEntry(metadata[item.tmdbId] ?? {}, buildEntry(item));
 	}
 
 	merged.metadata = metadata;
 	return merged;
+}
+
+/**
+ * Merge a freshly-built entry into the existing one for the same TMDB id, field by
+ * field, so a granular-only apply (only `seasons`) does not drop a previously
+ * exported show-level `url_poster`/`url_background`, and a season re-apply does not
+ * drop previously exported episodes. A field present in `next` overwrites; a field
+ * absent from `next` is preserved from `existing`.
+ */
+function mergeEntry(existing: KometaEntry, next: KometaEntry): KometaEntry {
+	const out: KometaEntry = { ...existing };
+	if (next.url_poster !== undefined) out.url_poster = next.url_poster;
+	if (next.url_background !== undefined) out.url_background = next.url_background;
+	if (next.seasons) {
+		const seasons: Record<number, KometaSeasonEntry> = { ...(existing.seasons ?? {}) };
+		for (const [key, nextSeason] of Object.entries(next.seasons)) {
+			const season = Number(key);
+			const prev = seasons[season] ?? {};
+			const mergedSeason: KometaSeasonEntry = { ...prev };
+			if (nextSeason.url_poster !== undefined) mergedSeason.url_poster = nextSeason.url_poster;
+			if (nextSeason.episodes) {
+				mergedSeason.episodes = { ...(prev.episodes ?? {}), ...nextSeason.episodes };
+			}
+			seasons[season] = mergedSeason;
+		}
+		out.seasons = seasons;
+	}
+	return out;
 }
 
 /**

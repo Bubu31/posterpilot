@@ -23,7 +23,10 @@ interface SelectBody {
 const CHILD_KINDS: ChildKind[] = ['poster', 'background', 'title_card'];
 
 function validSlot(s: ChildSlotInput): boolean {
-	return CHILD_KINDS.includes(s.kind) && Number.isFinite(s.season);
+	if (!CHILD_KINDS.includes(s.kind) || !Number.isFinite(s.season)) return false;
+	// Title cards are per-episode; season-level slots must not carry an episode.
+	if (s.kind === 'title_card') return Number.isFinite(s.episode);
+	return s.episode === null || s.episode === undefined;
 }
 
 export const POST: RequestHandler = async ({ params, request }) => {

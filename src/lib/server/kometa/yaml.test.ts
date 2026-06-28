@@ -99,6 +99,51 @@ describe('mergeMetadata', () => {
 		expect(existing.metadata['550']).toEqual({ url_poster: 'https://old.test/550.jpg' });
 	});
 
+	it('preserves an existing show poster when a granular-only apply adds seasons', () => {
+		const existing = {
+			metadata: {
+				'1399': { url_poster: 'https://example.test/show.jpg' }
+			}
+		};
+
+		const merged = mergeMetadata(existing, [
+			{
+				tmdbId: '1399',
+				title: 'GoT',
+				seasons: [{ season: 1, posterUrl: 'https://example.test/s1.jpg' }]
+			}
+		]) as { metadata: Record<string, { url_poster?: string; seasons?: unknown }> };
+
+		// Show poster kept; season added alongside it.
+		expect(merged.metadata['1399'].url_poster).toBe('https://example.test/show.jpg');
+		expect(merged.metadata['1399'].seasons).toEqual({
+			1: { url_poster: 'https://example.test/s1.jpg' }
+		});
+	});
+
+	it('merges season episodes across applies rather than replacing the season', () => {
+		const existing = {
+			metadata: {
+				'1399': {
+					seasons: { 1: { episodes: { 1: { url_poster: 'https://example.test/s1e1.jpg' } } } }
+				}
+			}
+		};
+
+		const merged = mergeMetadata(existing, [
+			{
+				tmdbId: '1399',
+				title: 'GoT',
+				seasons: [{ season: 1, episodes: [{ episode: 2, url: 'https://example.test/s1e2.jpg' }] }]
+			}
+		]) as { metadata: Record<string, { seasons: Record<number, { episodes: unknown }> }> };
+
+		expect(merged.metadata['1399'].seasons[1].episodes).toEqual({
+			1: { url_poster: 'https://example.test/s1e1.jpg' },
+			2: { url_poster: 'https://example.test/s1e2.jpg' }
+		});
+	});
+
 	it('initializes metadata when existing has none', () => {
 		const merged = mergeMetadata({}, [
 			{ tmdbId: '1', title: 'Solo', posterUrl: 'https://example.test/1.jpg' }

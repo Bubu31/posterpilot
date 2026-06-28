@@ -86,6 +86,7 @@
 	"item_expand": "Expandir",
 	"item_collapse": "Contraer",
 	"item_msg_applied_skipped": "Aplicado — {count} omitidos (sin temporada/episodio coincidente en el servidor)",
+	"item_msg_applied_partial": "Aplicado con errores — fallaron {count} subida(s) de temporada/episodio",
 	"item_no_candidates_resolved": "Aún no hay candidatos. Haz clic en «Buscar carátulas» para consultar los proveedores activos.",
 	"item_no_candidates_unresolved": "Aún no hay candidatos. Este elemento no tiene un id de TMDB resuelto, por lo que no se pueden consultar los proveedores.",
 	"item_label_poster": "póster",

@@ -360,10 +360,19 @@
 			const targetLabel = (mth: string) => (mth === 'kometa' ? 'Kometa' : m.apply_target_server());
 			const failed = outcomes.filter((o) => o.status === 'failed');
 			const skipped = outcomes.reduce((n, o) => n + (o.children?.skipped ?? 0), 0);
+			// Per-child upload failures keep method status 'success' (the show-level write
+			// succeeded), so surface them here rather than reporting a clean success.
+			const childFailed = outcomes.reduce((n, o) => n + (o.children?.failed ?? 0), 0);
 			if (!res.ok && !outcomes.length) {
 				setMessage(m.item_msg_apply_failed({ target: confirmTarget, error: res.status }), true);
 			} else if (failed.length === 0) {
-				setMessage(skipped ? m.item_msg_applied_skipped({ count: skipped }) : m.item_msg_applied());
+				if (childFailed > 0) {
+					setMessage(m.item_msg_applied_partial({ count: childFailed }), true);
+				} else {
+					setMessage(
+						skipped ? m.item_msg_applied_skipped({ count: skipped }) : m.item_msg_applied()
+					);
+				}
 				confirmApply = false;
 			} else {
 				setMessage(
