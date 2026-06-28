@@ -29,10 +29,17 @@ export const POST: RequestHandler = async ({ request }) => {
 	}
 	try {
 		const result = await loginByName(baseUrl, username, password, flavor);
+		// Make this the active server too, so the freshly stored credentials are
+		// actually used (otherwise tests/syncs keep resolving the previous server
+		// until the user separately presses Save).
 		if (flavor === 'jellyfin') {
-			await saveSettings({ jellyfinUrl: baseUrl, jellyfinApiKey: result.accessToken });
+			await saveSettings({
+				serverType: 'jellyfin',
+				jellyfinUrl: baseUrl,
+				jellyfinApiKey: result.accessToken
+			});
 		} else {
-			await saveSettings({ embyUrl: baseUrl, embyApiKey: result.accessToken });
+			await saveSettings({ serverType: 'emby', embyUrl: baseUrl, embyApiKey: result.accessToken });
 		}
 		await logEvent('info', 'settings', `Logged in to ${flavor}`, { user: result.userName });
 		return json({ ok: true, userName: result.userName });

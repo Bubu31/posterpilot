@@ -28,8 +28,16 @@ export async function getScoreWeights(): Promise<ScoreWeights> {
 		const obj = JSON.parse(row.value);
 		if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return DEFAULT_SCORE_WEIGHTS;
 		const stored = obj as Partial<ScoreWeights>;
+		// Keep only finite numeric provider weights — a stray string/NaN would turn
+		// scorePoster() into string concatenation and corrupt ranking.
+		const providerWeights = { ...DEFAULT_SCORE_WEIGHTS.providerWeights };
+		if (stored.providerWeights && typeof stored.providerWeights === 'object') {
+			for (const [k, v] of Object.entries(stored.providerWeights)) {
+				if (typeof v === 'number' && Number.isFinite(v)) providerWeights[k] = v;
+			}
+		}
 		return {
-			providerWeights: { ...DEFAULT_SCORE_WEIGHTS.providerWeights, ...stored.providerWeights },
+			providerWeights,
 			resolutionWeight:
 				typeof stored.resolutionWeight === 'number'
 					? stored.resolutionWeight

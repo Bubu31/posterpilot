@@ -78,9 +78,10 @@ export async function runSyncJob(
 			imdbId: item.guids.imdb ?? null,
 			tvdbId: item.guids.tvdb ?? null,
 			currentPosterUrl: item.currentPosterUrl,
-			// Record the server's change time + this sync pass for incremental skips.
+			// Record the server's change time for incremental skips. lastSyncedAt is
+			// advanced separately, only once the item is actually processed (below), so a
+			// transient failure leaves the item eligible for retry on the next sync.
 			serverUpdatedAt: item.serverUpdatedAt,
-			lastSyncedAt: new Date(),
 			updatedAt: new Date()
 		};
 
@@ -98,11 +99,15 @@ export async function runSyncJob(
 
 		// Skip the expensive TMDB resolution + enrichment when the item is unchanged
 		// since the last sync. The row above is still upserted (kept/unpruned) with a
-		// refreshed serverUpdatedAt/lastSyncedAt; we only avoid the network work.
+		// refreshed serverUpdatedAt; we only avoid the network work.
 		const reprocess = shouldReprocessItem(item.serverUpdatedAt, existing?.lastSyncedAt ?? null, {
 			full,
 			incremental: config.incrementalSync
 		});
+		// Only advance lastSyncedAt once the item is fully processed this pass. An
+		// unchanged item is already considered synced; a transient resolve/enrich
+		// failure leaves it unsynced so the next sync retries it.
+		let synced = !reprocess;
 		if (reprocess) {
 			try {
 				const resolution = await resolveTmdb(item.guids, config.tmdbKey!, {
@@ -119,8 +124,8 @@ export async function runSyncJob(
 						})
 						.where(eq(mediaItems.id, itemId));
 
-					// Enrich with TMDB display metadata. Best-effort: a failure here leaves
-					// the item resolved but un-enriched, to be backfilled on a later sync.
+					// Enrich with TMDB display metadata. A failure here leaves the item
+					// resolved but un-enriched and unsynced, so it is retried on a later sync.
 					try {
 						const meta = await fetchMetadata(
 							resolution.tmdbId,
@@ -145,15 +150,26 @@ export async function runSyncJob(
 								updatedAt: new Date()
 							})
 							.where(eq(mediaItems.id, itemId));
+						synced = true;
 					} catch {
-						// Enrichment failed (network/parse); leave metadata for the next sync.
+						// Enrichment failed (network/parse); leave it for the next sync to retry.
 					}
 				} else {
 					await db.update(mediaItems).set({ resolved: false }).where(eq(mediaItems.id, itemId));
+					// Deterministic no-match — retrying won't help until the server item changes.
+					synced = true;
 				}
 			} catch {
-				// Leave unresolved; a later sync or forced refresh can retry.
+				// Resolve failed (transient); leave unresolved + unsynced so a later sync retries.
 			}
+		}
+
+		// Advance the sync watermark only for fully-processed items.
+		if (synced) {
+			await db
+				.update(mediaItems)
+				.set({ lastSyncedAt: new Date() })
+				.where(eq(mediaItems.id, itemId));
 		}
 
 		processed++;

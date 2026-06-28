@@ -1,5 +1,6 @@
 import type { RequestHandler } from './$types';
 import { getOrFetchThumb } from '$lib/server/posters/thumb-cache';
+import { resolveConfig } from '$lib/server/config';
 
 /**
  * Registrable domains of the artwork providers PosterPilot fetches previews from.
@@ -40,7 +41,11 @@ export const GET: RequestHandler = async (event) => {
 	}
 
 	try {
-		const { bytes, contentType } = await getOrFetchThumb(url);
+		const config = await resolveConfig();
+		const { bytes, contentType } = await getOrFetchThumb(url, {
+			ttlMs: config.thumbCacheTtlDays * 24 * 60 * 60 * 1000,
+			maxBytes: config.thumbCacheMaxMb * 1024 * 1024
+		});
 		// Buffer is a Uint8Array, but typed as Node Buffer; wrap so it satisfies BodyInit.
 		return new Response(new Uint8Array(bytes), {
 			headers: {

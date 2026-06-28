@@ -143,7 +143,9 @@ export async function fetchAndCache(
 	const maxBytes = opts.maxBytes ?? DEFAULT_MAX_BYTES;
 	const urlHash = hashUrl(url);
 
-	const res = await fetch(url);
+	// Refuse redirects so an allowlisted CDN host can't 30x us to an internal target
+	// (SSRF), and time out so a hung upstream can't pin the request open.
+	const res = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(15000) });
 	if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
 	const contentType = res.headers.get('content-type') ?? 'application/octet-stream';
 	const bytes = Buffer.from(await res.arrayBuffer());
