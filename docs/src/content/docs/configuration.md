@@ -168,6 +168,17 @@ and locks the control in the UI.
   up the grid and cut provider bandwidth. Entries are reused until the TTL (in days)
   expires, and the cache is bounded by a maximum size (in MB) — once it is exceeded,
   the least-recently-used entries are evicted.
+- **Library default sort** (`LIBRARY_DEFAULT_SORT`, default `title`). Which sort
+  the library wall opens with when the URL doesn't name one: `title`, `year`,
+  `rating`, `runtime`, `recent` (recently changed), or `added` (date added on the
+  media server). Picking a sort in the library toolbar always overrides it.
+
+## The FUN section
+
+**FUN** (`FUN_ENABLED`, default off) is an opt-in home for library experiments,
+hidden until you enable it in **Settings → Kometa & advanced**. Its first tool is a
+random movie/series picker — see [Usage](/posterpilot/usage/#fun-random-movieseries-picker).
+While the toggle is off, FUN has no navigation entry and its page returns 404.
 
 ## Kometa export
 
@@ -242,6 +253,8 @@ and are locked in the UI.
 | `APPLY_CONCURRENCY`       | Apply concurrency         | `4`                                   | How many items a bulk apply processes concurrently.                                           |
 | `SUGGEST_PRESELECT`       | Suggested pre-select      | on                                    | Pre-select the top-scored candidate per slot as an overridable suggestion.                    |
 | `INCREMENTAL_SYNC`        | Incremental sync          | on                                    | Skip unchanged items on repeat syncs (a full rescan stays available).                         |
+| `LIBRARY_DEFAULT_SORT`    | Library default sort      | `title`                               | Sort the library wall opens with: `title`, `year`, `rating`, `runtime`, `recent`, or `added`. |
+| `FUN_ENABLED`             | FUN section               | off                                   | Show the experimental FUN section (random movie/series picker).                               |
 | `THUMB_CACHE_TTL_DAYS`    | Thumbnail cache TTL       | `30`                                  | Days a cached provider preview image stays fresh before it is re-fetched.                     |
 | `THUMB_CACHE_MAX_MB`      | Thumbnail cache size      | `512`                                 | Max on-disk size of the thumbnail cache (MB) before least-recently-used eviction.             |
 | `APP_LANGUAGE`                | Language                  | — (auto)                              | Preferred UI locale: `en`, `es`, `zh`, `ja`, or `pt-BR`.                                      |

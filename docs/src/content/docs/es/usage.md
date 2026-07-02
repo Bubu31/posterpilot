@@ -78,8 +78,10 @@ de herramientas al estilo de Notion. Puedes:
   predeterminado) y estado de ignorado. El botón Filtrar muestra una insignia con
   el número de facetas activas.
 - **Ordenar** desde el menú emergente **Ordenar** por título, año de estreno,
-  valoración, duración o más recientemente cambiados, con un selector ascendente/
-  descendente independiente.
+  valoración, duración, más recientemente cambiados o fecha de añadido al servidor
+  multimedia, con un selector ascendente/descendente independiente. El muro se abre
+  con la ordenación configurada en **Ajustes → Kometa y avanzado** (por defecto:
+  título); una elección explícita en la barra de herramientas siempre gana.
 - Cada filtro activo y la ordenación aparecen como **chips eliminables** debajo de
   la barra de herramientas; haz clic en la ✕ de un chip para descartar solo ese, o
   en **Limpiar todo** para reiniciarlo todo.
@@ -252,6 +254,34 @@ cualquier elemento o ranura que se omitiría— para que puedas confirmar antes 
 se escriba nada. La aplicación en lote procesa entonces los elementos de forma
 **concurrente** (limitada por el ajuste de concurrencia de aplicación), de modo que
 los lotes grandes terminan más rápido, con el mismo progreso en vivo y cancelación.
+
+## FUN: selector aleatorio de película/serie
+
+**FUN** es una sección opcional para experimentos de biblioteca (habilítala con el
+interruptor FUN en **Ajustes → Kometa y avanzado**, o con `FUN_ENABLED=true`).
+Hasta entonces permanece completamente oculta: sin entrada de navegación, y su
+página devuelve 404.
+
+Su primera herramienta responde a "¿qué vemos esta noche?": un clic saca un título
+aleatorio de tu biblioteca sincronizada y lo presenta dando protagonismo a la
+imagen —fondo, póster, géneros, valoración y sinopsis— con un enlace al elemento y
+un botón de **volver a sortear** que saca otro con los mismos filtros. Puedes
+acotar el sorteo por:
+
+- **Tipo** — películas, series o ambos.
+- **Género** — uno de los géneros de tu biblioteca, o todos.
+- **Rango de años** — un año de estreno mínimo y/o máximo opcional.
+- **Visto** — omite los títulos que ya has visto. El estado de visto se captura
+  durante la sincronización de la biblioteca (recuentos de reproducción de Plex;
+  banderas de reproducido de Jellyfin/Emby — una serie cuenta como vista solo
+  cuando todos los episodios se han reproducido).
+
+:::note
+En Jellyfin/Emby la bandera de reproducido necesita un contexto de usuario, así
+que inicia sesión con nombre de usuario/contraseña en lugar de una clave de API a
+secas: con solo una clave de API todo se sincroniza como no visto y el filtro de
+omitir vistos no tiene nada que excluir.
+:::
 
 ## Panel y tareas
 

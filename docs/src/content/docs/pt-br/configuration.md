@@ -163,6 +163,11 @@ controle na interface.
   acelerar a grade e reduzir a largura de banda dos provedores. As entradas são reutilizadas até
   o TTL (em dias) expirar, e o cache é limitado por um tamanho máximo (em MB) — quando ele é
   excedido, as entradas menos recentemente usadas são removidas.
+- **Ordenação padrão da biblioteca** (`LIBRARY_DEFAULT_SORT`, padrão `title`). Com qual
+  ordenação o mural da biblioteca abre quando a URL não nomeia uma: `title`, `year`,
+  `rating`, `runtime`, `recent` (alterado recentemente) ou `added` (data de adição no
+  servidor de mídia). Escolher uma ordenação na barra de ferramentas da biblioteca sempre
+  a sobrepõe.
 
 ## Exportação do Kometa
 
@@ -172,6 +177,14 @@ diretório nomeado por `KOMETA_ASSETS_DIR` (padrão `/kometa` no Docker). Monte
 esse caminho no seu diretório de config existente do Kometa para que o Kometa aplique as capas na
 próxima execução. Veja [Uso](/posterpilot/pt-br/usage/#aplicar-uma-capa) para saber como a exportação é
 consumida.
+
+## A seção FUN
+
+A **FUN** (`FUN_ENABLED`, padrão desligado) é uma área opcional para experimentos com a
+biblioteca, oculta até você habilitá-la em **Configurações → Kometa e avançado**. Sua primeira
+ferramenta é um sorteio aleatório de filme/série — veja
+[Uso](/posterpilot/pt-br/usage/#fun-sorteio-aleatório-de-filmesérie).
+Enquanto o alternador está desligado, a FUN não tem entrada de navegação e sua página retorna 404.
 
 ## Idioma
 
@@ -227,6 +240,8 @@ e ficam bloqueadas na interface.
 | `APPLY_CONCURRENCY`       | Concorrência de aplicação | `4`                                   | Quantos itens uma aplicação em massa processa concorrentemente.                               |
 | `SUGGEST_PRESELECT`       | Pré-seleção sugerida      | on                                    | Pré-seleciona o candidato com a maior pontuação por slot como uma sugestão substituível.      |
 | `INCREMENTAL_SYNC`        | Sincronização incremental | on                                    | Pula itens não alterados em sincronizações repetidas (uma varredura completa permanece disponível). |
+| `LIBRARY_DEFAULT_SORT`    | Ordenação padrão da biblioteca | `title`                          | Ordenação com que o mural da biblioteca abre: `title`, `year`, `rating`, `runtime`, `recent` ou `added`. |
+| `FUN_ENABLED`             | Seção FUN                 | off                                   | Exibe a seção experimental FUN (sorteio aleatório de filme/série).                            |
 | `THUMB_CACHE_TTL_DAYS`    | TTL do cache de miniaturas | `30`                                 | Dias que uma imagem de prévia de provedor em cache permanece válida antes de ser re-obtida.   |
 | `THUMB_CACHE_MAX_MB`      | Tamanho do cache de miniaturas | `512`                            | Tamanho máximo em disco do cache de miniaturas (MB) antes da remoção das menos recentemente usadas. |
 | `APP_LANGUAGE`                | Idioma                    | — (auto)                              | Localidade de interface preferida: `en`, `es`, `zh`, `ja` ou `pt-BR`.                          |

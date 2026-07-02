@@ -68,8 +68,11 @@ The synced library renders as a poster grid with a Notion-style toolbar. You can
   rating, genre, missing poster, MediUX availability (has candidates), change
   state (unchanged / still on the default poster), and ignored state. The Filter
   button shows a badge with the number of active facets.
-- **Sort** from the **Sort** popover by title, release year, rating, runtime, or
-  most-recently-changed, with an independent ascending/descending toggle.
+- **Sort** from the **Sort** popover by title, release year, rating, runtime,
+  most-recently-changed, or date added to the media server, with an independent
+  ascending/descending toggle. The wall opens with the sort configured in
+  **Settings → Kometa & advanced** (default: title); an explicit choice in the
+  toolbar always wins.
 - Each active filter and the sort show up as **removable chips** below the toolbar
   — click a chip's ✕ to drop just that one, or **Clear all** to reset everything.
 - Toggle **auto-apply** (the ⚡ button): on, each change navigates immediately; off,
@@ -217,6 +220,30 @@ happen — the planned uploads, the Kometa exports, and any items or slots that 
 be skipped — so you can confirm before anything is written. Bulk apply then
 processes items **concurrently** (bounded by the Apply concurrency setting), so
 large batches finish faster, with the same live progress and cancellation.
+
+## FUN: random movie/series picker
+
+**FUN** is an opt-in section for library experiments (enable it with the FUN
+toggle in **Settings → Kometa & advanced**, or `FUN_ENABLED=true`). Until then it
+stays completely hidden — no nav entry, and its page returns 404.
+
+Its first tool answers "what should we watch tonight?": one click draws a random
+title from your synced library and presents it image-forward — backdrop, poster,
+genres, rating, and overview — with a link to the item and a **re-roll** button
+that draws again under the same filters. You can constrain the draw by:
+
+- **Type** — movies, shows, or both.
+- **Genre** — one of your library's genres, or all.
+- **Year range** — an optional minimum and/or maximum release year.
+- **Watched** — skip titles you've already seen. Watched state is captured
+  during library sync (Plex play counts; Jellyfin/Emby played flags — a show
+  counts as watched only when every episode is played).
+
+:::note
+On Jellyfin/Emby the played flag needs a user context, so sign in with
+username/password rather than a bare API key — with only an API key everything
+syncs as unwatched and the skip-watched filter has nothing to exclude.
+:::
 
 ## Dashboard and jobs
 

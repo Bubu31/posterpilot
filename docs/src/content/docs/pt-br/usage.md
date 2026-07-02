@@ -69,7 +69,10 @@ no estilo do Notion. Você pode:
   alteração (não alterado / ainda com o pôster padrão) e estado ignorado. O botão Filtrar
   mostra um selo com o número de facetas ativas.
 - **Ordenar** a partir do popover **Ordenar** por título, ano de lançamento, classificação,
-  duração ou alterado mais recentemente, com um alternador de crescente/decrescente independente.
+  duração, alterado mais recentemente ou data de adição ao servidor de mídia, com um
+  alternador de crescente/decrescente independente. O mural abre com a ordenação configurada
+  em **Configurações → Kometa e avançado** (padrão: título); uma escolha explícita na barra
+  de ferramentas sempre vence.
 - Cada filtro ativo e a ordenação aparecem como **chips removíveis** abaixo da barra de
   ferramentas — clique no ✕ de um chip para descartar apenas aquele, ou em **Limpar tudo** para
   redefinir tudo.
@@ -217,6 +220,32 @@ que aconteceria — os envios planejados, as exportações do Kometa e quaisquer
 seriam pulados — para que você confirme antes que algo seja gravado. A aplicação em massa então
 processa os itens **concorrentemente** (limitada pela configuração de concorrência de aplicação),
 de modo que lotes grandes terminam mais rápido, com o mesmo progresso ao vivo e cancelamento.
+
+## FUN: sorteio aleatório de filme/série
+
+A **FUN** é uma seção opcional para experimentos com a biblioteca (habilite-a com o alternador
+FUN em **Configurações → Kometa e avançado**, ou com `FUN_ENABLED=true`). Até lá ela permanece
+completamente oculta — sem entrada de navegação, e sua página retorna 404.
+
+Sua primeira ferramenta responde "o que vamos assistir hoje à noite?": um clique sorteia um
+título aleatório da sua biblioteca sincronizada e o apresenta com foco na imagem — backdrop,
+pôster, gêneros, classificação e sinopse — com um link para o item e um botão de **sortear
+novamente** que sorteia de novo sob os mesmos filtros. Você pode restringir o sorteio por:
+
+- **Tipo** — filmes, séries ou ambos.
+- **Gênero** — um dos gêneros da sua biblioteca, ou todos.
+- **Faixa de anos** — um ano de lançamento mínimo e/ou máximo opcional.
+- **Assistidos** — pula títulos que você já viu. O estado de assistido é capturado durante a
+  sincronização da biblioteca (contagens de reprodução do Plex; flags de reproduzido do
+  Jellyfin/Emby — uma série só conta como assistida quando todos os episódios foram
+  reproduzidos).
+
+:::note
+No Jellyfin/Emby, a flag de reproduzido precisa de um contexto de usuário, então
+entre com nome de usuário/senha em vez de uma chave de API pura — apenas com uma
+chave de API tudo sincroniza como não assistido e o filtro de pular assistidos
+não tem nada a excluir.
+:::
 
 ## Dashboard e jobs
 
