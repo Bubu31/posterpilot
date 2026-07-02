@@ -27,6 +27,10 @@ export interface PlexItem {
 	currentPosterUrl: string | null;
 	/** Plex's own last-modified time for this item (from `updatedAt`), or null. */
 	serverUpdatedAt: Date | null;
+	/** When the item was added to the library (from `addedAt`), or null. */
+	addedAt: Date | null;
+	/** Played state: movie played at least once, show fully played. */
+	watched: boolean;
 }
 
 // --- TMDB ---

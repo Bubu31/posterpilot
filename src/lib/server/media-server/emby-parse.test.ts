@@ -148,7 +148,9 @@ describe('mapItems', () => {
 				guids: { tmdb: '603', imdb: 'tt0133093' },
 				currentPosterUrl: `${base}/Items/m1/Images/Primary?tag=ptag&api_key=${key}`,
 				currentBackgroundUrl: `${base}/Items/m1/Images/Backdrop?tag=btag&api_key=${key}`,
-				serverUpdatedAt: new Date('2023-11-14T22:13:20.000Z')
+				serverUpdatedAt: new Date('2023-11-14T22:13:20.000Z'),
+				addedAt: null,
+				watched: false
 			},
 			{
 				id: 's1',
@@ -158,9 +160,38 @@ describe('mapItems', () => {
 				guids: { tvdb: '81189' },
 				currentPosterUrl: `${base}/Items/s1/Images/Primary?tag=ptag2&api_key=${key}`,
 				currentBackgroundUrl: null,
-				serverUpdatedAt: null
+				serverUpdatedAt: null,
+				addedAt: null,
+				watched: false
 			}
 		]);
+	});
+
+	it('maps DateCreated to addedAt, null when missing or invalid', () => {
+		const res: RawEmbyItemsResponse = {
+			Items: [
+				{ Id: 'a', Name: 'Dated', Type: 'Movie', DateCreated: '2024-05-06T07:08:09.000Z' },
+				{ Id: 'b', Name: 'Missing', Type: 'Movie' },
+				{ Id: 'c', Name: 'Invalid', Type: 'Movie', DateCreated: 'not-a-date' }
+			]
+		};
+		const items = mapItems(res, base, key);
+		expect(items[0].addedAt).toEqual(new Date('2024-05-06T07:08:09.000Z'));
+		expect(items[1].addedAt).toBeNull();
+		expect(items[2].addedAt).toBeNull();
+	});
+
+	it('maps UserData.Played to watched, false when absent', () => {
+		const res: RawEmbyItemsResponse = {
+			Items: [
+				{ Id: 'a', Name: 'Seen', Type: 'Movie', UserData: { Played: true } },
+				{ Id: 'b', Name: 'Unseen', Type: 'Movie', UserData: { Played: false } },
+				{ Id: 'c', Name: 'NoData', Type: 'Series' },
+				{ Id: 'd', Name: 'NullPlayed', Type: 'Movie', UserData: { Played: null } }
+			]
+		};
+		const items = mapItems(res, base, key);
+		expect(items.map((i) => i.watched)).toEqual([true, false, false, false]);
 	});
 
 	it('maps DateLastModified to serverUpdatedAt, null when missing or invalid', () => {

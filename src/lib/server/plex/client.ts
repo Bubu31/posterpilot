@@ -11,7 +11,13 @@
 
 import { fetchJson } from '$lib/server/http';
 import type { PlexItem, PlexSection } from '$lib/server/types';
-import { buildPosterUrl, parseGuids, parseUpdatedAt, type PlexRawGuid } from './parse';
+import {
+	buildPosterUrl,
+	parseGuids,
+	parseUpdatedAt,
+	parseWatched,
+	type PlexRawGuid
+} from './parse';
 
 /** Shape of a Plex API JSON response: everything lives under `MediaContainer`. */
 interface PlexResponse<T> {
@@ -49,6 +55,14 @@ interface MetadataEntry {
 	index?: number;
 	/** Last-modified time as epoch seconds. */
 	updatedAt?: number;
+	/** Library-insertion time as epoch seconds. */
+	addedAt?: number;
+	/** Times a movie has been played. */
+	viewCount?: number;
+	/** Total episodes of a show. */
+	leafCount?: number;
+	/** Played episodes of a show. */
+	viewedLeafCount?: number;
 	Guid?: PlexRawGuid[];
 }
 
@@ -196,15 +210,20 @@ export async function listItems(
 		`/library/sections/${encodeURIComponent(sectionKey)}/all?includeGuids=1`
 	);
 	const metadata = container.Metadata ?? [];
-	return metadata.map((entry) => ({
-		ratingKey: entry.ratingKey,
-		title: entry.title,
-		year: typeof entry.year === 'number' ? entry.year : null,
-		type: entry.type === 'show' ? 'show' : 'movie',
-		guids: parseGuids(entry.Guid),
-		currentPosterUrl: buildPosterUrl(baseUrl, entry.thumb, token),
-		serverUpdatedAt: parseUpdatedAt(entry.updatedAt)
-	}));
+	return metadata.map((entry) => {
+		const type = entry.type === 'show' ? ('show' as const) : ('movie' as const);
+		return {
+			ratingKey: entry.ratingKey,
+			title: entry.title,
+			year: typeof entry.year === 'number' ? entry.year : null,
+			type,
+			guids: parseGuids(entry.Guid),
+			currentPosterUrl: buildPosterUrl(baseUrl, entry.thumb, token),
+			serverUpdatedAt: parseUpdatedAt(entry.updatedAt),
+			addedAt: parseUpdatedAt(entry.addedAt),
+			watched: parseWatched(type, entry)
+		};
+	});
 }
 
 /**

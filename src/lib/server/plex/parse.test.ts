@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildPosterUrl, parseGuids, parseUpdatedAt, type PlexRawGuid } from './parse';
+import {
+	buildPosterUrl,
+	parseGuids,
+	parseUpdatedAt,
+	parseWatched,
+	type PlexRawGuid
+} from './parse';
 
 describe('parseGuids', () => {
 	it('extracts tmdb, imdb, and tvdb ids', () => {
@@ -105,5 +111,33 @@ describe('buildPosterUrl', () => {
 		expect(buildPosterUrl('http://plex.local:32400', null, 'tok')).toBeNull();
 		expect(buildPosterUrl('http://plex.local:32400', undefined, 'tok')).toBeNull();
 		expect(buildPosterUrl('http://plex.local:32400', '', 'tok')).toBeNull();
+	});
+});
+
+describe('parseWatched', () => {
+	it('marks a movie watched once viewCount is positive', () => {
+		expect(parseWatched('movie', { viewCount: 1 })).toBe(true);
+		expect(parseWatched('movie', { viewCount: 3 })).toBe(true);
+	});
+
+	it('marks a movie unwatched when viewCount is zero or missing', () => {
+		expect(parseWatched('movie', { viewCount: 0 })).toBe(false);
+		expect(parseWatched('movie', {})).toBe(false);
+	});
+
+	it('marks a show watched only when all leaves are viewed', () => {
+		expect(parseWatched('show', { leafCount: 10, viewedLeafCount: 10 })).toBe(true);
+		expect(parseWatched('show', { leafCount: 10, viewedLeafCount: 9 })).toBe(false);
+	});
+
+	it('marks a show unwatched when counters are missing or empty', () => {
+		expect(parseWatched('show', {})).toBe(false);
+		expect(parseWatched('show', { leafCount: 0, viewedLeafCount: 0 })).toBe(false);
+		expect(parseWatched('show', { viewedLeafCount: 5 })).toBe(false);
+	});
+
+	it('ignores show counters on movies and viewCount on shows', () => {
+		expect(parseWatched('movie', { leafCount: 5, viewedLeafCount: 5 })).toBe(false);
+		expect(parseWatched('show', { viewCount: 2 })).toBe(false);
 	});
 });

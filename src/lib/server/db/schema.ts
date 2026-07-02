@@ -36,6 +36,10 @@ export const mediaItems = sqliteTable('media_items', {
 	ignored: integer('ignored', { mode: 'boolean' }).notNull().default(false),
 	/** The media server's own last-modified time for this item (null = unknown). */
 	serverUpdatedAt: integer('server_updated_at', { mode: 'timestamp' }),
+	/** When the item was added to the media server library (null = unknown). */
+	addedAt: integer('added_at', { mode: 'timestamp' }),
+	/** Played on the server: movie played at least once, show fully played. */
+	watched: integer('watched', { mode: 'boolean' }).notNull().default(false),
 	/** When this item was last processed by a sync (null = never). */
 	lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
 	updatedAt: integer('updated_at', { mode: 'timestamp' })

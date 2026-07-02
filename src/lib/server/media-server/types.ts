@@ -40,6 +40,10 @@ export interface ServerItem {
 	currentBackgroundUrl: string | null;
 	/** The media server's own last-modified time for this item; null when the server doesn't report one. */
 	serverUpdatedAt: Date | null;
+	/** When the item was added to the server library; null when unreported/invalid. */
+	addedAt: Date | null;
+	/** Played state: movie played at least once, show fully played. False when unreported. */
+	watched: boolean;
 }
 
 /**

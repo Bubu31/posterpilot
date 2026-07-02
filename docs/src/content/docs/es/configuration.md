@@ -184,6 +184,20 @@ persistido y bloquea el control en la interfaz.
   reutilizan hasta que expira el TTL (en días), y la caché está limitada por un
   tamaño máximo (en MB); una vez superado, se desalojan las entradas menos
   recientemente usadas.
+- **Ordenación por defecto de la biblioteca** (`LIBRARY_DEFAULT_SORT`, por defecto
+  `title`). Con qué ordenación se abre el muro de la biblioteca cuando la URL no
+  nombra ninguna: `title`, `year`, `rating`, `runtime`, `recent` (cambiados
+  recientemente) o `added` (fecha de añadido en el servidor multimedia). Elegir una
+  ordenación en la barra de herramientas de la biblioteca siempre la anula.
+
+## La sección FUN
+
+**FUN** (`FUN_ENABLED`, desactivada por defecto) es un espacio opcional para
+experimentos de biblioteca, oculto hasta que la habilitas en **Ajustes → Kometa y
+avanzado**. Su primera herramienta es un selector aleatorio de película/serie;
+consulta [Uso](/posterpilot/es/usage/#fun-selector-aleatorio-de-películaserie).
+Mientras el interruptor está desactivado, FUN no tiene entrada de navegación y su
+página devuelve 404.
 
 ## Exportación de Kometa
 
@@ -252,6 +266,8 @@ el entorno tienen prioridad y quedan bloqueados en la interfaz.
 | `APPLY_CONCURRENCY`       | Concurrencia de aplicación      | `4`                                    | Cuántos elementos procesa de forma concurrente una aplicación en lote.                               |
 | `SUGGEST_PRESELECT`       | Preselección sugerida           | activado                               | Preselecciona la candidata con mayor puntuación por ranura como una sugerencia anulable.             |
 | `INCREMENTAL_SYNC`        | Sincronización incremental      | activado                               | Omite los elementos sin cambios en las sincronizaciones repetidas (sigue disponible un reanálisis completo). |
+| `LIBRARY_DEFAULT_SORT`    | Ordenación por defecto de la biblioteca | `title`                        | Ordenación con la que se abre el muro de la biblioteca: `title`, `year`, `rating`, `runtime`, `recent` o `added`. |
+| `FUN_ENABLED`             | Sección FUN                     | desactivado                            | Muestra la sección experimental FUN (selector aleatorio de película/serie).                            |
 | `THUMB_CACHE_TTL_DAYS`    | TTL de caché de miniaturas      | `30`                                   | Días que una imagen de vista previa de proveedor en caché se mantiene fresca antes de volver a obtenerse. |
 | `THUMB_CACHE_MAX_MB`      | Tamaño de caché de miniaturas   | `512`                                  | Tamaño máximo en disco de la caché de miniaturas (MB) antes del desalojo de las menos recientemente usadas. |
 | `APP_LANGUAGE`                | Idioma                          | — (automático)                         | Locale de interfaz preferido: `en`, `es`, `zh`, `ja` o `pt-BR`.                                      |

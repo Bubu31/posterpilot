@@ -65,6 +65,32 @@ export function parseUpdatedAt(updatedAt: number | undefined | null): Date | nul
 }
 
 /**
+ * Derive an item's watched state from Plex play counters.
+ *
+ * A movie is watched once played at least once (`viewCount > 0`). A show is
+ * watched only when fully played (`viewedLeafCount >= leafCount`), matching
+ * Jellyfin/Emby `Played` semantics. Missing or malformed counters yield false.
+ *
+ * @param type The item type (movie/show).
+ * @param entry The play counters from a Plex `Metadata` object.
+ * @returns True when the item counts as watched.
+ */
+export function parseWatched(
+	type: 'movie' | 'show',
+	entry: { viewCount?: number; leafCount?: number; viewedLeafCount?: number }
+): boolean {
+	if (type === 'movie') {
+		return typeof entry.viewCount === 'number' && entry.viewCount > 0;
+	}
+	return (
+		typeof entry.leafCount === 'number' &&
+		entry.leafCount > 0 &&
+		typeof entry.viewedLeafCount === 'number' &&
+		entry.viewedLeafCount >= entry.leafCount
+	);
+}
+
+/**
  * Build an absolute, token-authenticated URL for a Plex `thumb` path.
  *
  * Plex returns relative thumb paths (e.g. `/library/metadata/42/thumb/16800`)

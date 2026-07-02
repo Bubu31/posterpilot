@@ -4,6 +4,8 @@
 	import { page } from '$app/state';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { m } from '$lib/paraglide/messages';
+	import { LIBRARY_SORTS } from '$lib/library-sort';
+	import { sortLabels } from '$lib/sort-labels';
 	import { setLocale } from '$lib/paraglide/runtime';
 	import PlexLogin from '$lib/components/PlexLogin.svelte';
 	import EmbyLogin from '$lib/components/EmbyLogin.svelte';
@@ -195,6 +197,10 @@
 	let thumbCacheTtlDays = $state(String(data.config.thumbCacheTtlDays));
 	// svelte-ignore state_referenced_locally
 	let thumbCacheMaxMb = $state(String(data.config.thumbCacheMaxMb));
+	// svelte-ignore state_referenced_locally
+	let funEnabled = $state(data.config.funEnabled);
+	// svelte-ignore state_referenced_locally
+	let libraryDefaultSort = $state(data.config.libraryDefaultSort);
 	// Preferred UI language — reflects the active locale and writes the same
 	// `language` setting as the header switcher.
 	// svelte-ignore state_referenced_locally
@@ -271,7 +277,9 @@
 				suggestPreselect: String(suggestPreselect),
 				incrementalSync: String(incrementalSync),
 				thumbCacheTtlDays: String(thumbCacheTtlDays),
-				thumbCacheMaxMb: String(thumbCacheMaxMb)
+				thumbCacheMaxMb: String(thumbCacheMaxMb),
+				funEnabled: String(funEnabled),
+				libraryDefaultSort
 			};
 			// Only send secrets when (re)entered, so a blank field keeps the stored value.
 			if (plexToken) payload.plexToken = plexToken;
@@ -755,6 +763,30 @@
 					<input type="checkbox" bind:checked={incrementalSync} disabled={env.incrementalSync} />
 					{m.settings_incremental_sync()}
 				</label>
+				<label class="flex items-center gap-2 text-sm text-neutral-300">
+					<input type="checkbox" bind:checked={funEnabled} disabled={env.funEnabled} />
+					{m.settings_fun_enabled()}
+				</label>
+				{#if env.funEnabled}<p class="text-xs text-amber-400">{m.settings_set_from_env()}</p>{/if}
+			</div>
+
+			<div class="mt-4 max-w-xs">
+				<label for="libraryDefaultSort" class="mb-1 block text-sm font-medium"
+					>{m.settings_library_default_sort()}</label
+				>
+				<select
+					id="libraryDefaultSort"
+					bind:value={libraryDefaultSort}
+					disabled={env.libraryDefaultSort}
+					class="input w-full disabled:opacity-50"
+				>
+					{#each LIBRARY_SORTS as sort (sort)}
+						<option value={sort}>{sortLabels[sort]()}</option>
+					{/each}
+				</select>
+				{#if env.libraryDefaultSort}<p class="mt-1 text-xs text-amber-400">
+						{m.settings_set_from_env()}
+					</p>{/if}
 			</div>
 		</div>
 	{:else if tab === 'language'}

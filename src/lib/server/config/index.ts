@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db';
 import { settings } from '$lib/server/db/schema';
 import { normalizeLocale } from '$lib/i18n/resolve';
+import { parseLibrarySort, type LibrarySort } from '$lib/library-sort';
 import { getEncryptionKey } from '$lib/server/secrets/key';
 import { decryptSecret, encryptSecret } from '$lib/server/secrets/crypto';
 import type { KometaSnapshot } from '$lib/server/kometa/config';
@@ -76,6 +77,10 @@ export interface AppConfig {
 	thumbCacheTtlDays: number;
 	/** Max on-disk size (MB) of the thumbnail cache before older entries are evicted. */
 	thumbCacheMaxMb: number;
+	/** Whether the experimental "Fun" section is shown (off by default). */
+	funEnabled: boolean;
+	/** Sort the library grid opens with when the URL specifies none. */
+	libraryDefaultSort: LibrarySort;
 }
 
 /** Config keys that are secrets — never returned to the client, redacted in logs. */
@@ -122,7 +127,9 @@ const ENV_MAP: Record<ConfigKey, string> = {
 	suggestPreselect: 'SUGGEST_PRESELECT',
 	incrementalSync: 'INCREMENTAL_SYNC',
 	thumbCacheTtlDays: 'THUMB_CACHE_TTL_DAYS',
-	thumbCacheMaxMb: 'THUMB_CACHE_MAX_MB'
+	thumbCacheMaxMb: 'THUMB_CACHE_MAX_MB',
+	funEnabled: 'FUN_ENABLED',
+	libraryDefaultSort: 'LIBRARY_DEFAULT_SORT'
 };
 
 const DEFAULTS = {
@@ -145,7 +152,9 @@ const DEFAULTS = {
 	suggestPreselect: true,
 	incrementalSync: true,
 	thumbCacheTtlDays: 30,
-	thumbCacheMaxMb: 512
+	thumbCacheMaxMb: 512,
+	funEnabled: false,
+	libraryDefaultSort: 'title' as LibrarySort
 	// `language` has no default: when unset the UI locale resolver falls through
 	// to the request's Accept-Language header, then English.
 };
@@ -179,7 +188,9 @@ export const WRITABLE_KEYS: ConfigKey[] = [
 	'suggestPreselect',
 	'incrementalSync',
 	'thumbCacheTtlDays',
-	'thumbCacheMaxMb'
+	'thumbCacheMaxMb',
+	'funEnabled',
+	'libraryDefaultSort'
 ];
 
 /** True when a settings key holds a secret value (encrypted at rest). */
@@ -293,7 +304,10 @@ export async function resolveConfig(): Promise<AppConfig> {
 		suggestPreselect: toBool(rawValue('suggestPreselect', persisted), DEFAULTS.suggestPreselect),
 		incrementalSync: toBool(rawValue('incrementalSync', persisted), DEFAULTS.incrementalSync),
 		thumbCacheTtlDays: toInt(rawValue('thumbCacheTtlDays', persisted), DEFAULTS.thumbCacheTtlDays),
-		thumbCacheMaxMb: toInt(rawValue('thumbCacheMaxMb', persisted), DEFAULTS.thumbCacheMaxMb)
+		thumbCacheMaxMb: toInt(rawValue('thumbCacheMaxMb', persisted), DEFAULTS.thumbCacheMaxMb),
+		funEnabled: toBool(rawValue('funEnabled', persisted), DEFAULTS.funEnabled),
+		libraryDefaultSort:
+			parseLibrarySort(rawValue('libraryDefaultSort', persisted)) ?? DEFAULTS.libraryDefaultSort
 	};
 }
 
@@ -559,6 +573,10 @@ export interface PublicConfig {
 	thumbCacheTtlDays: number;
 	/** Max on-disk size (MB) of the thumbnail cache before older entries are evicted. */
 	thumbCacheMaxMb: number;
+	/** Whether the experimental "Fun" section is shown. */
+	funEnabled: boolean;
+	/** Sort the library grid opens with when the URL specifies none. */
+	libraryDefaultSort: LibrarySort;
 	envManaged: Partial<Record<ConfigKey, boolean>>;
 }
 
@@ -596,6 +614,8 @@ export async function publicConfig(): Promise<PublicConfig> {
 		incrementalSync: c.incrementalSync,
 		thumbCacheTtlDays: c.thumbCacheTtlDays,
 		thumbCacheMaxMb: c.thumbCacheMaxMb,
+		funEnabled: c.funEnabled,
+		libraryDefaultSort: c.libraryDefaultSort,
 		envManaged
 	};
 }

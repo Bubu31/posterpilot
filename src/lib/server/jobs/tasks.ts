@@ -82,6 +82,8 @@ export async function runSyncJob(
 			// advanced separately, only once the item is actually processed (below), so a
 			// transient failure leaves the item eligible for retry on the next sync.
 			serverUpdatedAt: item.serverUpdatedAt,
+			addedAt: item.addedAt,
+			watched: item.watched,
 			updatedAt: new Date()
 		};
 
