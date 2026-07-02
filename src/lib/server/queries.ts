@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, like, lt, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, like, lt, lte, sql, type SQL } from 'drizzle-orm';
 import { db } from './db';
 import {
 	appliedPosters,
@@ -10,9 +10,13 @@ import {
 	type MediaItem
 } from './db/schema';
 import { groupByProvider, groupCandidatesBySet } from './posters/sets';
+import type { PickFilter } from './fun-pick';
 
-/** Sort orders offered by the library grid. */
-export type LibrarySort = 'title' | 'year' | 'rating' | 'runtime' | 'recent';
+import { defaultSortDir, type LibrarySort, type SortDir } from './library-sort';
+
+// Re-exported so existing importers keep one entry point for sort types.
+export { LIBRARY_SORTS, defaultSortDir, parseLibrarySort } from './library-sort';
+export type { LibrarySort, SortDir } from './library-sort';
 
 export interface LibraryFilter {
 	type?: 'movie' | 'show';
@@ -35,13 +39,6 @@ const lastAppliedAt = sql`(
 	where ap.media_item_id = ${mediaItems.id} and ap.status = 'success'
 )`;
 
-export type SortDir = 'asc' | 'desc';
-
-/** The natural default direction for a sort field (title ascends; the rest descend). */
-export function defaultSortDir(sort: LibrarySort | undefined): SortDir {
-	return sort === 'title' || sort === undefined ? 'asc' : 'desc';
-}
-
 /** Build the ORDER BY clause for a library sort + direction. */
 function orderFor(sort: LibrarySort | undefined, dir: SortDir | undefined): SQL {
 	const d = dir ?? defaultSortDir(sort);
@@ -55,6 +52,10 @@ function orderFor(sort: LibrarySort | undefined, dir: SortDir | undefined): SQL 
 			return ascending ? asc(mediaItems.runtime) : desc(mediaItems.runtime);
 		case 'recent':
 			return sql`${lastAppliedAt} ${sql.raw(ascending ? 'asc' : 'desc')}`;
+		case 'added':
+			// Items never re-synced since the column landed have no added_at; keep
+			// them at the end in both directions rather than floating nulls first.
+			return sql`${mediaItems.addedAt} ${sql.raw(ascending ? 'asc' : 'desc')} nulls last`;
 		case 'title':
 		default:
 			return ascending ? asc(mediaItems.title) : desc(mediaItems.title);
@@ -124,6 +125,30 @@ export async function getMontagePosters(limit = 14): Promise<string[]> {
 		.orderBy(sql`random()`)
 		.limit(limit);
 	return rows.map((r) => r.url).filter((u): u is string => Boolean(u));
+}
+
+/**
+ * Pick one library item uniformly at random under the Fun picker's filters.
+ * Returns null when nothing matches. `ignored` items stay eligible — that flag
+ * is a poster-management concept, not a watch-list one.
+ */
+export async function pickRandomItem(filter: PickFilter): Promise<MediaItem | null> {
+	const conds: SQL[] = [];
+	if (filter.type) conds.push(eq(mediaItems.type, filter.type));
+	if (filter.genre)
+		conds.push(
+			sql`exists (select 1 from json_each(${mediaItems.genres}) where json_each.value = ${filter.genre})`
+		);
+	if (filter.yearMin !== undefined) conds.push(gte(mediaItems.year, filter.yearMin));
+	if (filter.yearMax !== undefined) conds.push(lte(mediaItems.year, filter.yearMax));
+	if (filter.excludeWatched) conds.push(eq(mediaItems.watched, false));
+	const rows = await db
+		.select()
+		.from(mediaItems)
+		.where(conds.length ? and(...conds) : undefined)
+		.orderBy(sql`random()`)
+		.limit(1);
+	return rows[0] ?? null;
 }
 
 async function count(where?: SQL): Promise<number> {

@@ -33,6 +33,10 @@ export interface RawEmbyItem {
 	BackdropImageTags?: string[];
 	/** Server's last-modified time as an ISO-8601 string. */
 	DateLastModified?: string | null;
+	/** When the item was added to the library, as an ISO-8601 string. */
+	DateCreated?: string | null;
+	/** Per-user playback state (requires the authenticated user context). */
+	UserData?: { Played?: boolean | null } | null;
 }
 
 /** Shape of the `/Items` (and `/Library/MediaFolders`) response envelope. */
@@ -180,8 +184,9 @@ export function mapItems(
 		const type = itemTypeToMediaType(item.Type);
 		if (!type || !item.Id) continue;
 		const backdropTag = item.BackdropImageTags?.[0];
-		// Guard against an unparseable DateLastModified → null rather than Invalid Date.
+		// Guard against unparseable dates → null rather than Invalid Date.
 		const lastModified = item.DateLastModified ? new Date(item.DateLastModified) : null;
+		const created = item.DateCreated ? new Date(item.DateCreated) : null;
 		result.push({
 			id: item.Id,
 			title: item.Name ?? item.Id,
@@ -196,7 +201,9 @@ export function mapItems(
 				apiKey
 			),
 			currentBackgroundUrl: buildEmbyImageUrl(baseUrl, item.Id, 'Backdrop', backdropTag, apiKey),
-			serverUpdatedAt: lastModified && !Number.isNaN(lastModified.getTime()) ? lastModified : null
+			serverUpdatedAt: lastModified && !Number.isNaN(lastModified.getTime()) ? lastModified : null,
+			addedAt: created && !Number.isNaN(created.getTime()) ? created : null,
+			watched: item.UserData?.Played === true
 		});
 	}
 	return result;

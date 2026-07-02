@@ -53,6 +53,7 @@
 		{ href: '/', label: m.nav_dashboard() },
 		{ href: '/library', label: m.nav_library() },
 		{ href: '/kometa', label: m.nav_kometa() },
+		...(data.funEnabled ? [{ href: '/fun', label: m.nav_fun() }] : []),
 		{ href: '/settings', label: m.nav_settings() }
 	]);
 

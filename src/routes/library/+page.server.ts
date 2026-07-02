@@ -3,13 +3,14 @@ import {
 	getSpotlightItem,
 	listGenres,
 	listLibrary,
+	LIBRARY_SORTS,
 	type LibraryFilter,
 	type LibrarySort
 } from '$lib/server/queries';
-
-const SORTS: LibrarySort[] = ['title', 'year', 'rating', 'runtime', 'recent'];
+import { resolveConfig } from '$lib/server/config';
 
 export const load: PageServerLoad = async ({ url }) => {
+	const config = await resolveConfig();
 	const type = url.searchParams.get('type');
 	const sortParam = url.searchParams.get('sort');
 	const dirParam = url.searchParams.get('dir');
@@ -22,14 +23,18 @@ export const load: PageServerLoad = async ({ url }) => {
 		// Ignore a missing/zero/non-numeric value rather than binding NaN (libsql throws on NaN).
 		minRating: Number.isFinite(minRatingParam) && minRatingParam > 0 ? minRatingParam : undefined,
 		genre: url.searchParams.get('genre') || undefined,
-		sort: SORTS.includes(sortParam as LibrarySort) ? (sortParam as LibrarySort) : undefined,
+		sort: LIBRARY_SORTS.includes(sortParam as LibrarySort) ? (sortParam as LibrarySort) : undefined,
 		dir: dirParam === 'asc' || dirParam === 'desc' ? dirParam : undefined,
 		q: url.searchParams.get('q') || undefined
 	};
+	// The URL's sort always wins; the configured default only fills its absence.
+	// `filter` is returned with the URL-only sort so the UI can tell an explicit
+	// user choice (chip-worthy) from the configured default.
+	const defaultSort = config.libraryDefaultSort;
 	const [items, genres, spotlight] = await Promise.all([
-		listLibrary(filter),
+		listLibrary({ ...filter, sort: filter.sort ?? defaultSort }),
 		listGenres(),
 		getSpotlightItem()
 	]);
-	return { items, filter, genres, spotlight };
+	return { items, filter, genres, spotlight, defaultSort };
 };

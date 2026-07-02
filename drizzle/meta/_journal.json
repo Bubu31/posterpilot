@@ -50,6 +50,13 @@
       "when": 1782610916667,
       "tag": "0006_breezy_sinister_six",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1783031983126,
+      "tag": "0007_first_puff_adder",
+      "breakpoints": true
     }
   ]
 }

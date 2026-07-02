@@ -12,6 +12,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		version,
 		// Ready when the active media server is configured and TMDB is set.
 		configReady: Boolean(getActiveServer(config) && config.tmdbKey),
+		// Gates the "Fun" nav entry (the /fun route also 404s server-side when off).
+		funEnabled: config.funEnabled,
 		// Active locale (resolved per request in hooks.server.ts) plus the available
 		// locales, so the header switcher and client runtime stay in sync with SSR.
 		locale: locals.locale,

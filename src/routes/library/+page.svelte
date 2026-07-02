@@ -105,7 +105,9 @@
 		return sort === 'title' || sort === undefined ? 'asc' : 'desc';
 	}
 	// svelte-ignore state_referenced_locally
-	let dir = $state<'asc' | 'desc'>(data.filter.dir ?? defaultDir(data.filter.sort));
+	let dir = $state<'asc' | 'desc'>(
+		data.filter.dir ?? defaultDir(data.filter.sort ?? data.defaultSort)
+	);
 
 	// Popover open state.
 	let filterOpen = $state(false);
@@ -117,16 +119,18 @@
 		rating: m.library_sort_rating,
 		year: m.library_sort_year,
 		runtime: m.library_sort_runtime,
-		recent: m.library_sort_recent
+		recent: m.library_sort_recent,
+		added: m.library_sort_added
 	};
 	const typeLabels: Record<string, () => string> = {
 		movie: m.library_type_movies,
 		show: m.library_type_shows
 	};
-	const sortField = $derived(data.filter.sort ?? 'title');
-	const sortDir = $derived(data.filter.dir ?? defaultDir(data.filter.sort));
-	// The sort is "active" (chip-worthy) when a non-default field or direction is set.
-	const hasSort = $derived(!!data.filter.sort || sortDir !== defaultDir(data.filter.sort));
+	// The effective field falls back to the configured default; only an explicit
+	// URL sort counts as "active" (chip-worthy), so the default never shows a chip.
+	const sortField = $derived(data.filter.sort ?? data.defaultSort);
+	const sortDir = $derived(data.filter.dir ?? defaultDir(sortField));
+	const hasSort = $derived(!!data.filter.sort || sortDir !== defaultDir(sortField));
 
 	// How many filter facets (not sort) are currently active — drives the Filter badge.
 	const activeFilterCount = $derived(
@@ -201,7 +205,8 @@
 	function onSortChange(e: Event) {
 		const value = (e.currentTarget as HTMLSelectElement).value;
 		dir = defaultDir(value);
-		navigate({ sort: value === 'title' ? undefined : value, dir });
+		// Picking the configured default drops the param (no chip, same order).
+		navigate({ sort: value === data.defaultSort ? undefined : value, dir });
 	}
 	function toggleDir() {
 		dir = dir === 'asc' ? 'desc' : 'asc';
@@ -441,12 +446,13 @@
 		<div class="space-y-3">
 			<label class="block">
 				<span class="mb-1 block text-xs text-neutral-400">{m.library_sort_button()}</span>
-				<select value={data.filter.sort ?? 'title'} onchange={onSortChange} class="input w-full">
+				<select value={sortField} onchange={onSortChange} class="input w-full">
 					<option value="title">{m.library_sort_title()}</option>
 					<option value="rating">{m.library_sort_rating()}</option>
 					<option value="year">{m.library_sort_year()}</option>
 					<option value="runtime">{m.library_sort_runtime()}</option>
 					<option value="recent">{m.library_sort_recent()}</option>
+					<option value="added">{m.library_sort_added()}</option>
 				</select>
 			</label>
 			<button

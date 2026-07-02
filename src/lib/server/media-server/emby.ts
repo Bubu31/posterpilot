@@ -223,7 +223,11 @@ export function embyLikeProvider(baseUrl: string, apiKey: string, flavor: EmbyFl
 				ParentId: libraryKey,
 				Recursive: 'true',
 				IncludeItemTypes: 'Movie,Series',
-				Fields: 'ProviderIds,ProductionYear,DateLastModified',
+				Fields: 'ProviderIds,ProductionYear,DateLastModified,DateCreated',
+				// UserData (Played) is only attached when the token carries a user
+				// context (username/password login); with a bare API key the server
+				// omits it and items map to watched=false.
+				EnableUserData: 'true',
 				EnableImageTypes: 'Primary,Backdrop'
 			});
 			const res = await getJson<RawEmbyItemsResponse>(`/Items?${params.toString()}`);
