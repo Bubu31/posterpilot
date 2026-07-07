@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.0](https://github.com/diegopeixoto/posterpilot/compare/v0.7.0...v0.8.0) (2026-07-07)
+
+
+### Features
+
+* add toast notifications and skeleton loaders ([8a6a089](https://github.com/diegopeixoto/posterpilot/commit/8a6a08937a9c5ee0b829f2bfce66495f6180c625))
+* optional arr-style authentication with security hardening ([bfa12c6](https://github.com/diegopeixoto/posterpilot/commit/bfa12c6b6ad8a2897258fec0457e18d668785162))
+* optional auth + hardening and the full plan follow-up set (one version) ([d3eaf13](https://github.com/diegopeixoto/posterpilot/commit/d3eaf13c7f80fe05290808ac6b1f1ed9ff6f2a37))
+* paginate library grid + cached poster-thumbnail proxy ([df87c72](https://github.com/diegopeixoto/posterpilot/commit/df87c72eacae7bc29606be6db67ea7cbf736ef74))
+* paginate the library query (WIP — first page + total) ([85eca12](https://github.com/diegopeixoto/posterpilot/commit/85eca12e1a44cdaec5c23fbc488392ed2c5bff5f))
+
 ## [0.7.0](https://github.com/diegopeixoto/posterpilot/compare/v0.6.0...v0.7.0) (2026-07-02)
 
 
