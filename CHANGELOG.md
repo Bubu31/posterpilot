@@ -5,11 +5,15 @@
 
 ### Features
 
-* add toast notifications and skeleton loaders ([8a6a089](https://github.com/diegopeixoto/posterpilot/commit/8a6a08937a9c5ee0b829f2bfce66495f6180c625))
-* optional arr-style authentication with security hardening ([bfa12c6](https://github.com/diegopeixoto/posterpilot/commit/bfa12c6b6ad8a2897258fec0457e18d668785162))
-* optional auth + hardening and the full plan follow-up set (one version) ([d3eaf13](https://github.com/diegopeixoto/posterpilot/commit/d3eaf13c7f80fe05290808ac6b1f1ed9ff6f2a37))
-* paginate library grid + cached poster-thumbnail proxy ([df87c72](https://github.com/diegopeixoto/posterpilot/commit/df87c72eacae7bc29606be6db67ea7cbf736ef74))
-* paginate the library query (WIP — first page + total) ([85eca12](https://github.com/diegopeixoto/posterpilot/commit/85eca12e1a44cdaec5c23fbc488392ed2c5bff5f))
+* **Optional login** — require a username and password to reach PosterPilot, *arr-style: off by default, or on except for local-network addresses. Signed sessions, an `AUTH_MODE` env override that recovers a locked-out instance, and fail-closed handling behind a reverse proxy. Enabling it is non-breaking — existing installs are untouched until you opt in. ([#30](https://github.com/diegopeixoto/posterpilot/pull/30))
+* **Faster large libraries** — the library wall now loads a page at a time and fills in as you scroll instead of shipping every title in one payload, and posters are served through a cached, grid-sized thumbnail proxy, so browsing a big library is far snappier. ([#30](https://github.com/diegopeixoto/posterpilot/pull/30))
+* **Clearer feedback** — toast notifications for saves and actions, plus skeleton placeholders while the grid loads. ([#30](https://github.com/diegopeixoto/posterpilot/pull/30))
+* **Safer by default** — custom-poster uploads are validated by content and size, every response carries baseline security headers, outbound requests honor provider rate limits (`Retry-After`), and authentication events are logged (never the password). ([#30](https://github.com/diegopeixoto/posterpilot/pull/30))
+
+
+### Under the hood
+
+* Added an ESLint gate, more test coverage (Kometa catalogs), de-duplicated Plex upload code, and began splitting the settings/library pages into components. ([#30](https://github.com/diegopeixoto/posterpilot/pull/30))
 
 ## [0.7.0](https://github.com/diegopeixoto/posterpilot/compare/v0.6.0...v0.7.0) (2026-07-02)
 
