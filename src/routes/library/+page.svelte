@@ -5,6 +5,8 @@
 	import PosterCard from '$lib/components/PosterCard.svelte';
 	import JobProgress from '$lib/components/JobProgress.svelte';
 	import Popover from '$lib/components/Popover.svelte';
+	import Skeleton from '$lib/components/Skeleton.svelte';
+	import LibrarySpotlight from '$lib/components/library/LibrarySpotlight.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import { LIBRARY_SORTS, defaultSortDir, type LibrarySort } from '$lib/library-sort';
 	import { sortLabels } from '$lib/sort-labels';
@@ -95,12 +97,63 @@
 		localStorage.setItem('pp_ignoreview', view);
 	}
 
+	// Accumulated server rows (first page from SSR, more appended on scroll). Re-seeded
+	// whenever a new SSR payload arrives (a filter/sort change navigates and reloads).
+	// svelte-ignore state_referenced_locally
+	let items = $state(data.items);
+	// svelte-ignore state_referenced_locally
+	let total = $state(data.total);
+	let loadingMore = $state(false);
+	let loadError = $state(false);
+	$effect(() => {
+		// Depend on the server payload; reset the accumulator when it changes.
+		items = data.items;
+		total = data.total;
+	});
+
+	// More server rows exist beyond what we've loaded (the ignore-view filter below is
+	// client-side, so paging is bounded by the raw server count, not the visible count).
+	const hasMore = $derived(items.length < total);
+
+	async function loadMore() {
+		if (loadingMore || !hasMore) return;
+		loadingMore = true;
+		loadError = false;
+		try {
+			const params = new URLSearchParams(page.url.searchParams);
+			params.set('offset', String(items.length));
+			const res = await fetch(`/api/library?${params.toString()}`);
+			if (!res.ok) throw new Error(String(res.status));
+			const body = (await res.json()) as { items: typeof data.items; total: number };
+			// Guard against a stale response landing after a filter change reset the list.
+			items = [...items, ...body.items];
+			total = body.total;
+		} catch {
+			loadError = true;
+		} finally {
+			loadingMore = false;
+		}
+	}
+
 	const visibleItems = $derived(
-		data.items.filter((item) => {
+		items.filter((item) => {
 			if (ignoreView === 'all') return true;
 			return ignoreView === 'ignored' ? isIgnored(item) : !isIgnored(item);
 		})
 	);
+
+	// Auto-load the next page when a sentinel near the end of the grid scrolls into
+	// view (prefetch margin), with the button as a no-JS / manual fallback.
+	function onVisible(node: HTMLElement, callback: () => void) {
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting) callback();
+			},
+			{ rootMargin: '600px' }
+		);
+		observer.observe(node);
+		return { destroy: () => observer.disconnect() };
+	}
 
 	// Popover open state.
 	let filterOpen = $state(false);
@@ -293,24 +346,7 @@
 </div>
 
 <!-- Spotlight -->
-{#if data.spotlight?.backdropUrl}
-	<a
-		href={`/item/${data.spotlight.id}`}
-		class="relative mt-4 block h-40 overflow-hidden rounded-xl border border-neutral-800"
-	>
-		<img
-			src={data.spotlight.backdropUrl}
-			alt=""
-			class="absolute inset-0 h-full w-full object-cover"
-		/>
-		<div class="absolute inset-0 bg-gradient-to-r from-neutral-950/90 to-transparent"></div>
-		<div class="absolute bottom-4 left-5">
-			<p class="text-xs tracking-wide text-accent-300 uppercase">{m.library_recently_updated()}</p>
-			<p class="text-lg font-semibold text-white">{data.spotlight.title}</p>
-			<p class="text-xs text-neutral-300">{data.spotlight.year ?? ''}</p>
-		</div>
-	</a>
-{/if}
+<LibrarySpotlight spotlight={data.spotlight} />
 
 <!-- Toolbar: search · Filter · Sort · auto-apply -->
 <div class="mt-4 flex flex-wrap items-center gap-2 text-sm">
@@ -727,4 +763,27 @@
 			</div>
 		{/each}
 	</div>
+
+	{#if loadingMore}
+		<!-- Skeleton tiles while the next page loads, matching the grid layout. -->
+		<div
+			class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8"
+			aria-hidden="true"
+		>
+			{#each Array(8) as _, i (i)}
+				<Skeleton class="aspect-[2/3] w-full rounded-lg" />
+			{/each}
+		</div>
+	{/if}
+	{#if hasMore}
+		<!-- Sentinel: auto-loads the next page when it nears the viewport. -->
+		<div use:onVisible={loadMore} class="mt-6 flex justify-center">
+			<button type="button" onclick={loadMore} disabled={loadingMore} class="btn btn-ghost">
+				{loadingMore ? m.library_loading_more() : m.library_load_more()}
+			</button>
+		</div>
+	{/if}
+	{#if loadError}
+		<p class="mt-3 text-center text-sm text-red-300" role="alert">{m.library_load_error()}</p>
+	{/if}
 {/if}

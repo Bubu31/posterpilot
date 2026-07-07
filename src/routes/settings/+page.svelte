@@ -4,11 +4,13 @@
 	import { page } from '$app/state';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { m } from '$lib/paraglide/messages';
+	import { toasts } from '$lib/stores/toasts.svelte';
 	import { LIBRARY_SORTS } from '$lib/library-sort';
 	import { sortLabels } from '$lib/sort-labels';
 	import { setLocale } from '$lib/paraglide/runtime';
 	import PlexLogin from '$lib/components/PlexLogin.svelte';
 	import EmbyLogin from '$lib/components/EmbyLogin.svelte';
+	import SecuritySettings from '$lib/components/settings/SecuritySettings.svelte';
 
 	let { data } = $props();
 	// svelte-ignore state_referenced_locally
@@ -66,14 +68,15 @@
 		refreshLibraries();
 	});
 
-	type Tab = 'server' | 'providers' | 'advanced' | 'language' | 'activity';
-	const TABS: Tab[] = ['server', 'providers', 'advanced', 'language', 'activity'];
+	type Tab = 'server' | 'providers' | 'advanced' | 'security' | 'language' | 'activity';
+	const TABS: Tab[] = ['server', 'providers', 'advanced', 'security', 'language', 'activity'];
 	const initialTab = page.url.searchParams.get('tab');
 	let tab = $state<Tab>(TABS.includes(initialTab as Tab) ? (initialTab as Tab) : 'server');
 	const tabs: { key: Tab; label: () => string }[] = [
 		{ key: 'server', label: m.settings_tab_server },
 		{ key: 'providers', label: m.settings_tab_providers },
 		{ key: 'advanced', label: m.settings_tab_advanced },
+		{ key: 'security', label: m.settings_tab_security },
 		{ key: 'language', label: m.settings_tab_language },
 		{ key: 'activity', label: m.settings_tab_activity }
 	];
@@ -308,9 +311,11 @@
 			tmdbKey = '';
 			fanartKey = '';
 			saved = true;
+			toasts.success(m.settings_saved());
 			await invalidateAll();
 		} catch {
 			saveError = m.settings_save_failed();
+			toasts.error(m.settings_save_failed());
 		} finally {
 			saving = false;
 		}
@@ -828,6 +833,8 @@
 				{/if}
 			</div>
 		</div>
+	{:else if tab === 'security'}
+		<SecuritySettings auth={data.auth} />
 	{:else}
 		<div>
 			<div class="flex flex-wrap items-center gap-1">
@@ -902,7 +909,7 @@
 		</div>
 	{/if}
 
-	{#if tab !== 'activity'}
+	{#if tab !== 'activity' && tab !== 'security'}
 		<div class="flex items-center gap-3 border-t border-neutral-800 pt-4">
 			<button onclick={save} disabled={saving} class="btn btn-accent px-4 py-2"
 				>{saving ? m.settings_saving() : m.settings_save()}</button
