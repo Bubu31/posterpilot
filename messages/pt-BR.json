@@ -431,5 +431,6 @@
 	"security_save_error": "Não foi possível salvar as configurações de segurança.",
 	"library_load_more": "Carregar mais",
 	"library_loading_more": "Carregando…",
-	"library_load_error": "Não foi possível carregar mais itens."
+	"library_load_error": "Não foi possível carregar mais itens.",
+	"toast_dismiss": "Dispensar"
 }

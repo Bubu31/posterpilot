@@ -5,6 +5,7 @@
 	import PosterCard from '$lib/components/PosterCard.svelte';
 	import JobProgress from '$lib/components/JobProgress.svelte';
 	import Popover from '$lib/components/Popover.svelte';
+	import Skeleton from '$lib/components/Skeleton.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import { LIBRARY_SORTS, defaultSortDir, type LibrarySort } from '$lib/library-sort';
 	import { sortLabels } from '$lib/sort-labels';
@@ -779,6 +780,17 @@
 		{/each}
 	</div>
 
+	{#if loadingMore}
+		<!-- Skeleton tiles while the next page loads, matching the grid layout. -->
+		<div
+			class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8"
+			aria-hidden="true"
+		>
+			{#each Array(8) as _, i (i)}
+				<Skeleton class="aspect-[2/3] w-full rounded-lg" />
+			{/each}
+		</div>
+	{/if}
 	{#if hasMore}
 		<!-- Sentinel: auto-loads the next page when it nears the viewport. -->
 		<div use:onVisible={loadMore} class="mt-6 flex justify-center">

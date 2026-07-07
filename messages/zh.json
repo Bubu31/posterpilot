@@ -431,5 +431,6 @@
 	"security_save_error": "无法保存安全设置。",
 	"library_load_more": "加载更多",
 	"library_loading_more": "加载中…",
-	"library_load_error": "无法加载更多项目。"
+	"library_load_error": "无法加载更多项目。",
+	"toast_dismiss": "关闭"
 }

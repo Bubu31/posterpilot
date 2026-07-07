@@ -431,5 +431,6 @@
 	"security_save_error": "Could not save security settings.",
 	"library_load_more": "Load more",
 	"library_loading_more": "Loading…",
-	"library_load_error": "Couldn't load more items."
+	"library_load_error": "Couldn't load more items.",
+	"toast_dismiss": "Dismiss"
 }

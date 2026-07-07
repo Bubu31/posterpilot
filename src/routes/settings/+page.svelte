@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { m } from '$lib/paraglide/messages';
+	import { toasts } from '$lib/stores/toasts.svelte';
 	import { LIBRARY_SORTS } from '$lib/library-sort';
 	import { sortLabels } from '$lib/sort-labels';
 	import { setLocale } from '$lib/paraglide/runtime';
@@ -347,9 +348,11 @@
 			tmdbKey = '';
 			fanartKey = '';
 			saved = true;
+			toasts.success(m.settings_saved());
 			await invalidateAll();
 		} catch {
 			saveError = m.settings_save_failed();
+			toasts.error(m.settings_save_failed());
 		} finally {
 			saving = false;
 		}

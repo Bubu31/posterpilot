@@ -431,5 +431,6 @@
 	"security_save_error": "セキュリティ設定を保存できませんでした。",
 	"library_load_more": "さらに読み込む",
 	"library_loading_more": "読み込み中…",
-	"library_load_error": "追加の項目を読み込めませんでした。"
+	"library_load_error": "追加の項目を読み込めませんでした。",
+	"toast_dismiss": "閉じる"
 }

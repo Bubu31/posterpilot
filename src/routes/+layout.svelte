@@ -7,6 +7,7 @@
 	import { setLocale } from '$lib/paraglide/runtime';
 	import { registerClientLocaleStrategy, seedClientLocale } from '$lib/i18n/strategy.client';
 	import WhatsNewModal from '$lib/components/WhatsNewModal.svelte';
+	import Toaster from '$lib/components/Toaster.svelte';
 
 	// Local copy of the version comparison (the canonical `isNewerVersion` lives in
 	// `$lib/server/semver`, which SvelteKit forbids importing into client code).
@@ -312,3 +313,5 @@
 	body={whatsNew.body}
 	url={whatsNew.url}
 />
+
+<Toaster />
