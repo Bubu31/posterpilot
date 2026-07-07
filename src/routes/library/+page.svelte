@@ -6,6 +6,7 @@
 	import JobProgress from '$lib/components/JobProgress.svelte';
 	import Popover from '$lib/components/Popover.svelte';
 	import Skeleton from '$lib/components/Skeleton.svelte';
+	import LibrarySpotlight from '$lib/components/library/LibrarySpotlight.svelte';
 	import { m } from '$lib/paraglide/messages';
 	import { LIBRARY_SORTS, defaultSortDir, type LibrarySort } from '$lib/library-sort';
 	import { sortLabels } from '$lib/sort-labels';
@@ -345,24 +346,7 @@
 </div>
 
 <!-- Spotlight -->
-{#if data.spotlight?.backdropUrl}
-	<a
-		href={`/item/${data.spotlight.id}`}
-		class="relative mt-4 block h-40 overflow-hidden rounded-xl border border-neutral-800"
-	>
-		<img
-			src={data.spotlight.backdropUrl}
-			alt=""
-			class="absolute inset-0 h-full w-full object-cover"
-		/>
-		<div class="absolute inset-0 bg-gradient-to-r from-neutral-950/90 to-transparent"></div>
-		<div class="absolute bottom-4 left-5">
-			<p class="text-xs tracking-wide text-accent-300 uppercase">{m.library_recently_updated()}</p>
-			<p class="text-lg font-semibold text-white">{data.spotlight.title}</p>
-			<p class="text-xs text-neutral-300">{data.spotlight.year ?? ''}</p>
-		</div>
-	</a>
-{/if}
+<LibrarySpotlight spotlight={data.spotlight} />
 
 <!-- Toolbar: search · Filter · Sort · auto-apply -->
 <div class="mt-4 flex flex-wrap items-center gap-2 text-sm">
