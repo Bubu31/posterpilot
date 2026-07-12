@@ -1,4 +1,4 @@
-export const POSTER_GRID_KEYS = [
+const POSTER_GRID_KEYS = [
 	'ArrowLeft',
 	'ArrowRight',
 	'ArrowUp',

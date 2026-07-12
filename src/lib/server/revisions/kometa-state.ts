@@ -17,7 +17,7 @@ function slotTail(slot: ApplySlot): (string | number)[] {
 	return ['seasons', slot.season, slot.kind === 'background' ? 'url_background' : 'url_poster'];
 }
 
-export function kometaSlotPath(tmdbId: string, slot: ApplySlot): (string | number)[] {
+function kometaSlotPath(tmdbId: string, slot: ApplySlot): (string | number)[] {
 	return ['metadata', tmdbId, ...slotTail(slot)];
 }
 

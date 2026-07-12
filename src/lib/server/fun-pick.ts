@@ -5,7 +5,7 @@
 
 export { funResultId, funSeedHash, rankFunItems } from '$lib/fun-seed';
 
-export const FUN_MAX_CHOICES = 3;
+const FUN_MAX_CHOICES = 3;
 export const FUN_MAX_RECENT_EXCLUSIONS = 24;
 
 export type FunPreset = 'movie-night' | 'quick-watch' | 'acclaimed' | 'fresh-unwatched';

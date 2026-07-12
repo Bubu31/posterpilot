@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { settings } from '$lib/server/db/schema';
 
-export const SETUP_DISMISSED_KEY = 'setupDismissed';
+const SETUP_DISMISSED_KEY = 'setupDismissed';
 
 export async function isSetupDismissed(): Promise<boolean> {
 	const [row] = await db

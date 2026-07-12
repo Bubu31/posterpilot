@@ -35,7 +35,7 @@ type OccurrenceRow = typeof automationOccurrences.$inferSelect;
 
 export type AutomationOccurrenceStatus = OccurrenceRow['status'];
 
-export class AutomationStoreError extends Error {
+class AutomationStoreError extends Error {
 	constructor(
 		readonly code: string,
 		readonly field: string | null = null

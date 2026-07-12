@@ -3,7 +3,7 @@ import type { CapabilitySupport } from '$lib/server/media-server';
 import type { NativeCollectionArtworkCandidate } from './native-artwork-candidates';
 
 export const NATIVE_COLLECTION_ARTWORK_PLAN_KIND = 'native_collection_artwork_apply' as const;
-export const NATIVE_COLLECTION_ARTWORK_PLAN_VERSION = 1 as const;
+const NATIVE_COLLECTION_ARTWORK_PLAN_VERSION = 1 as const;
 
 export type NativeCollectionArtworkPlanSkipCode =
 	| 'collection_slot_unsupported'

@@ -9,11 +9,7 @@ import {
 	type TestManagedServerInput,
 	type UpdateManagedServerInput
 } from './management';
-import {
-	createServerInstanceStore,
-	type CreateServerInstanceInput,
-	type UpdateServerInstanceInput
-} from './store';
+import { createServerInstanceStore } from './store';
 
 // Deliberately lazy: hooks imports this module before migrations run, so resolving the
 // encryption key or touching `server_instances` at module evaluation would be premature.
@@ -35,11 +31,6 @@ function liveManagementService() {
 
 export const listServerInstances = () => liveStore().list();
 export const getServerInstance = (id: string) => liveStore().get(id);
-export const createServerInstance = (input: CreateServerInstanceInput) => liveStore().create(input);
-export const updateServerInstance = (id: string, input: UpdateServerInstanceInput) =>
-	liveStore().update(id, input);
-export const deleteServerInstance = (id: string) => liveStore().remove(id);
-export const disconnectServerInstance = (id: string) => liveStore().disconnect(id);
 export const getServerInstanceConnection = (
 	id: string,
 	options: { requireEnabled?: boolean } = {}

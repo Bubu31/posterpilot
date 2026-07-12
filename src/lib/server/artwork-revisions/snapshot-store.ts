@@ -25,7 +25,7 @@ const REFERENCE_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/;
  * cleanup policy explicit, this protects a blob created immediately before its
  * durable database/reference record from a concurrent maintenance pass.
  */
-export const DEFAULT_SNAPSHOT_CLEANUP_GRACE_MS = 24 * 60 * 60 * 1_000;
+const DEFAULT_SNAPSHOT_CLEANUP_GRACE_MS = 24 * 60 * 60 * 1_000;
 
 export type SnapshotStoreErrorCode =
 	| 'invalid_reference_id'

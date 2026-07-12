@@ -14,7 +14,7 @@ export interface ScoreWeights {
 	aspectWeight: number;
 }
 
-export const ARTWORK_PROVIDER_IDS = ['mediux', 'theposterdb', 'fanarttv', 'tmdb'] as const;
+const ARTWORK_PROVIDER_IDS = ['mediux', 'theposterdb', 'fanarttv', 'tmdb'] as const;
 export type ArtworkProviderId = (typeof ARTWORK_PROVIDER_IDS)[number];
 
 /** Deterministic tie-break order used when no valid override exists. */
@@ -30,8 +30,8 @@ export interface ScoreWeightConfigFields {
 	scoreAspect: number;
 }
 
-export const SCORE_WEIGHT_MIN = 0;
-export const SCORE_WEIGHT_MAX = 10;
+const SCORE_WEIGHT_MIN = 0;
+const SCORE_WEIGHT_MAX = 10;
 
 /**
  * Default weights, tuned for PosterPilot's provider preference order.
@@ -58,7 +58,7 @@ export const DEFAULT_SCORE_WEIGHTS: ScoreWeights = {
 	aspectWeight: 0.3
 };
 
-export const DEFAULT_SCORE_CONFIG_FIELDS: ScoreWeightConfigFields = {
+const DEFAULT_SCORE_CONFIG_FIELDS: ScoreWeightConfigFields = {
 	scoreProviderMediux: DEFAULT_SCORE_WEIGHTS.providerWeights.mediux,
 	scoreProviderThePosterDb: DEFAULT_SCORE_WEIGHTS.providerWeights.theposterdb,
 	scoreProviderFanarttv: DEFAULT_SCORE_WEIGHTS.providerWeights.fanarttv,

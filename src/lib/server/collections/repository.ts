@@ -54,7 +54,7 @@ export type CollectionRepositoryErrorCode =
 	| 'collection_server_scope_mismatch'
 	| 'collection_item_scope_mismatch';
 
-export class CollectionRepositoryError extends Error {
+class CollectionRepositoryError extends Error {
 	constructor(readonly code: CollectionRepositoryErrorCode) {
 		super(code);
 		this.name = 'CollectionRepositoryError';

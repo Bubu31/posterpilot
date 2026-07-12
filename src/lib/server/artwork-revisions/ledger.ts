@@ -42,7 +42,7 @@ export type ArtworkRevisionLedgerErrorCode =
 	| 'revision_link_scope_mismatch';
 
 /** Locale-neutral persistence failure; route adapters can map `code` later. */
-export class ArtworkRevisionLedgerError extends Error {
+class ArtworkRevisionLedgerError extends Error {
 	constructor(
 		readonly code: ArtworkRevisionLedgerErrorCode,
 		readonly recordId: string

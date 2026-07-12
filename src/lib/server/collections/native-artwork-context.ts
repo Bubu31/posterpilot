@@ -16,7 +16,7 @@ export type NativeCollectionArtworkContextErrorCode =
 	| 'invalid_native_collection_request'
 	| 'collection_not_found';
 
-export class NativeCollectionArtworkContextError extends Error {
+class NativeCollectionArtworkContextError extends Error {
 	constructor(readonly code: NativeCollectionArtworkContextErrorCode) {
 		super(code);
 		this.name = 'NativeCollectionArtworkContextError';

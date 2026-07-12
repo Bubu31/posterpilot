@@ -5,7 +5,7 @@ import {
 } from '$lib/server/plans/canonical-json';
 
 export const UNDO_PLAN_KIND = 'artwork_undo' as const;
-export const UNDO_PLAN_VERSION = 1 as const;
+const UNDO_PLAN_VERSION = 1 as const;
 
 export type UndoPlanDestination = 'server' | 'kometa';
 export type UndoSlotKind = 'poster' | 'background' | 'title_card';
@@ -112,7 +112,7 @@ export interface BuiltUndoPlan {
 
 export type UndoPlanValidationErrorCode = 'invalid_undo_plan';
 
-export class UndoPlanValidationError extends TypeError {
+class UndoPlanValidationError extends TypeError {
 	constructor(
 		readonly code: UndoPlanValidationErrorCode,
 		message: string
@@ -346,7 +346,7 @@ function sameTarget(left: UndoPlanTarget, right: UndoPlanTarget): boolean {
 	return canonicalJson(left) === canonicalJson(right);
 }
 
-export function undoSlotKey(slot: UndoPlanSlot): string {
+function undoSlotKey(slot: UndoPlanSlot): string {
 	return `${slot.kind}:${slot.season ?? 'root'}:${slot.episode ?? 'root'}`;
 }
 

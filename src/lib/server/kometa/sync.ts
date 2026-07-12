@@ -5,7 +5,7 @@
  * the logic it composes is tested in `config.test.ts` / `config-io.test.ts`.
  */
 
-import { posix, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import {
 	getCachedLibraries,
 	getKometaDefaultCollections,
@@ -82,7 +82,7 @@ import {
 	type OperationPlan
 } from '$lib/server/plans/operation-plan-store';
 
-export { parseSelectionInput, type SyncSelectionInput } from './selection';
+export { type SyncSelectionInput } from './selection';
 
 /** State the settings page needs to render the Kometa tab. */
 export interface KometaTabState {
@@ -193,11 +193,6 @@ function planIdentity(plan: OperationPlan<KometaConfigPlanPayload>) {
  */
 function metadataFilePath(_config: AppConfig): string {
 	return DEFAULT_FILENAME;
-}
-
-/** Absolute on-disk directory where posterpilot.yml is written (the config dir). */
-export function kometaOutputDir(config: AppConfig): string {
-	return config.kometaConfigPath ? posix.dirname(config.kometaConfigPath) : config.kometaAssetsDir;
 }
 
 /** Build the desired-state plan from the user's selections + resolved config. */

@@ -351,30 +351,6 @@ export const operationPlanStore = createOperationPlanStore(db, {
 	}
 });
 
-export function createOperationPlan<T>(
-	input: CreateOperationPlanInput<T>
-): Promise<OperationPlan<T>> {
-	return operationPlanStore.create(input);
-}
-
-export function loadOperationPlan<T = JsonValue>(id: string): Promise<OperationPlan<T> | null> {
-	return operationPlanStore.load<T>(id);
-}
-
-export function validateOperationPlan<T = JsonValue>(
-	id: string,
-	expectations: OperationPlanExpectations = {}
-): Promise<OperationPlan<T>> {
-	return operationPlanStore.validate<T>(id, expectations);
-}
-
-export function consumeOperationPlan<T = JsonValue>(
-	id: string,
-	expectations: OperationPlanExpectations = {}
-): Promise<OperationPlan<T>> {
-	return operationPlanStore.consume<T>(id, expectations);
-}
-
 export function pruneOperationPlans(options: PruneOperationPlansOptions = {}): Promise<number> {
 	return operationPlanStore.prune(options);
 }

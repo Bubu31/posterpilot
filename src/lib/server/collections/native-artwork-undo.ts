@@ -38,7 +38,7 @@ export type NativeCollectionUndoErrorCode =
 	| 'native_collection_undo_scope_mismatch'
 	| 'native_collection_undo_scope_not_found';
 
-export class NativeCollectionUndoError extends Error {
+class NativeCollectionUndoError extends Error {
 	constructor(readonly code: NativeCollectionUndoErrorCode) {
 		super(code);
 		this.name = 'NativeCollectionUndoError';

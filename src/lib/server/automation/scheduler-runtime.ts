@@ -48,9 +48,3 @@ export function startAutomationScheduler(intervalMs = DEFAULT_POLL_INTERVAL_MS):
 	}, intervalMs);
 	(timer as unknown as { unref?: () => void }).unref?.();
 }
-
-export function stopAutomationSchedulerForTests(): void {
-	if (timer) clearInterval(timer);
-	timer = null;
-	enqueueImplementation = null;
-}

@@ -86,7 +86,7 @@ function formatter(timezone: string): Intl.DateTimeFormat {
 	return value;
 }
 
-export function isValidTimeZone(timezone: string): boolean {
+function isValidTimeZone(timezone: string): boolean {
 	if (!timezone || timezone.trim() !== timezone) return false;
 	try {
 		formatter(timezone);
@@ -282,20 +282,6 @@ export function nextIntervalRun(after: Date, anchor: Date, intervalMinutes: numb
 	const elapsed = cursor.getTime() - origin.getTime();
 	const steps = Math.floor(elapsed / intervalMs) + 1;
 	return new Date(origin.getTime() + steps * intervalMs);
-}
-
-export function nextScheduledRun(
-	timing: AutomationScheduleTiming,
-	input: { after: Date; anchor?: Date; previousScheduledFor?: Date }
-): Date | null {
-	assertTimeZone(timing.timezone);
-	if (timing.triggerType === 'event') return null;
-	if (timing.triggerType === 'interval') {
-		return nextIntervalRun(input.after, input.anchor ?? input.after, timing.intervalMinutes);
-	}
-	return input.previousScheduledFor
-		? nextDailyRunAfterOccurrence(input.previousScheduledFor, timing.localTime, timing.timezone)
-		: nextDailyRun(input.after, timing.localTime, timing.timezone);
 }
 
 export function dueOccurrenceDecision(

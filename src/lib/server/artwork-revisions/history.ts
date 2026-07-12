@@ -12,7 +12,7 @@ import {
 
 type Database = LibSQLDatabase<typeof schema>;
 
-export const ARTWORK_HISTORY_DEFAULT_LIMIT = 50;
+const ARTWORK_HISTORY_DEFAULT_LIMIT = 50;
 export const ARTWORK_HISTORY_MAX_LIMIT = 100;
 
 export type ArtworkHistoryDestination = 'server' | 'kometa';
@@ -227,7 +227,7 @@ export function parseArtworkRevisionHistoryQuery(
 	return query;
 }
 
-export function encodeArtworkRevisionHistoryCursor(createdAt: Date, revisionId: string): string {
+function encodeArtworkRevisionHistoryCursor(createdAt: Date, revisionId: string): string {
 	if (!Number.isFinite(createdAt.getTime()) || !SAFE_IDENTIFIER.test(revisionId)) {
 		throw new TypeError('Invalid artwork revision history cursor values');
 	}
@@ -315,7 +315,7 @@ function publicCandidate(value: unknown): PublicArtworkCandidateProvenance | nul
 	};
 }
 
-export function toPublicArtworkProvenance(value: unknown): PublicArtworkProvenance | null {
+function toPublicArtworkProvenance(value: unknown): PublicArtworkProvenance | null {
 	const provenance = record(value);
 	if (!provenance) return null;
 	const sourceItem = record(provenance.sourceItem);

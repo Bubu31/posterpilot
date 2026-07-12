@@ -114,7 +114,7 @@ function kometaStateFromDocument(
 	};
 }
 
-export async function readDatabaseKometaState(
+async function readDatabaseKometaState(
 	config: AppConfig,
 	tmdbId: string,
 	slot: ResolveApplyDestinationsInput['selections'][number]['slot']

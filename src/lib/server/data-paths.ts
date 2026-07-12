@@ -1,7 +1,7 @@
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 export const DEFAULT_DATABASE_URL = 'file:./data/posterpilot.db';
-export const DEFAULT_DATA_DIRECTORY = './data';
+const DEFAULT_DATA_DIRECTORY = './data';
 
 const FILE_URL_PREFIX = 'file:';
 

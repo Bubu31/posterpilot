@@ -5,8 +5,8 @@ import type { SyncSelectionInput } from './selection';
 import { hashCanonicalJson } from '$lib/server/plans/canonical-json';
 
 export const KOMETA_CONFIG_PLAN_KIND = 'kometa_config_mutation';
-export const KOMETA_CONFIG_PLAN_VERSION = 1 as const;
-export const MAX_KOMETA_DIFF_ENTRIES = 500;
+const KOMETA_CONFIG_PLAN_VERSION = 1 as const;
+const MAX_KOMETA_DIFF_ENTRIES = 500;
 
 export type KometaConfigPlanAction = 'structured' | 'raw' | 'restore';
 

@@ -1,4 +1,4 @@
-export const TERMINAL_JOB_STATUSES = [
+const TERMINAL_JOB_STATUSES = [
 	'completed',
 	'partial_failed',
 	'failed',

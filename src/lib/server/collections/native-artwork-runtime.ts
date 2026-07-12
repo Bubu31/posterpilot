@@ -118,14 +118,6 @@ export function readNativeCollectionCurrentArtwork(
 	return runtime().service.readCurrent(serverInstanceId, mediaCollectionId, kind);
 }
 
-export function readNativeCollectionCandidateArtwork(
-	serverInstanceId: string,
-	mediaCollectionId: string,
-	candidateId: string
-) {
-	return runtime().service.readCandidate(serverInstanceId, mediaCollectionId, candidateId);
-}
-
 export function getNativeCollectionCandidatePreviewSource(
 	serverInstanceId: string,
 	mediaCollectionId: string,

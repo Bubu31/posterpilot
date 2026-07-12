@@ -5,7 +5,7 @@ import { mediaItems, reviewEvents } from '$lib/server/db/schema';
 import { reviewStateExpression } from './state-sql';
 import type { ReviewState } from './state';
 
-export const REVIEW_ACTIONS = [
+const REVIEW_ACTIONS = [
 	'reviewed',
 	'ignored',
 	'unignored',

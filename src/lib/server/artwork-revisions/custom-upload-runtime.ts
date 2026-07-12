@@ -32,7 +32,7 @@ export type CustomUploadRuntimeErrorCode =
 	| 'artwork_read_unavailable';
 
 /** Locale-neutral runtime failure; HTTP adapters expose only this stable code. */
-export class CustomUploadRuntimeError extends Error {
+class CustomUploadRuntimeError extends Error {
 	constructor(readonly code: CustomUploadRuntimeErrorCode) {
 		super(code);
 		this.name = 'CustomUploadRuntimeError';

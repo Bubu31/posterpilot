@@ -87,16 +87,6 @@ export async function getProviderPriority(): Promise<ArtworkProviderId[]> {
 	return parseProviderPriority(row?.value) ?? [...DEFAULT_PROVIDER_PRIORITY];
 }
 
-/** Persist the tunable scoring weights. */
-export async function setScoreWeights(weights: ScoreWeights): Promise<void> {
-	const parsed = parseScoreWeights(weights);
-	if (!parsed) throw new TypeError('invalid_score_weights');
-	await db
-		.insert(settings)
-		.values({ key: SCORE_WEIGHTS_KEY, value: JSON.stringify(parsed) })
-		.onConflictDoUpdate({ target: settings.key, set: { value: JSON.stringify(parsed) } });
-}
-
 /** Atomically persist one complete deterministic ranking definition. */
 export async function setArtworkRankingSettings(input: {
 	providerPriority: unknown;

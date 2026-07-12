@@ -51,8 +51,8 @@ import type {
 } from '$lib/server/plans/operation-plan-store';
 import { ACTIVE_SERVER_INSTANCE_KEY } from './store';
 
-export const SERVER_PURGE_PLAN_KIND = 'server_permanent_purge';
-export const SERVER_PURGE_PLAN_VERSION = 1 as const;
+const SERVER_PURGE_PLAN_KIND = 'server_permanent_purge';
+const SERVER_PURGE_PLAN_VERSION = 1 as const;
 
 const ACTIVE_JOB_STATUSES = ['pending', 'running', 'retry_scheduled'] as const;
 const MUTATING_JOB_TYPES = [
@@ -167,7 +167,7 @@ export type ServerPurgeErrorCode =
 	| 'server_purge_invalid_plan'
 	| 'server_purge_scope_mismatch';
 
-export class ServerPurgeError extends Error {
+class ServerPurgeError extends Error {
 	constructor(readonly code: ServerPurgeErrorCode) {
 		super(code);
 		this.name = 'ServerPurgeError';
@@ -636,9 +636,7 @@ function isImpact(value: unknown): value is ServerPurgeImpact {
 	return Object.values(record).every((entry) => Number.isSafeInteger(entry) && Number(entry) >= 0);
 }
 
-export function assertServerPurgePlanPayload(
-	payload: unknown
-): asserts payload is ServerPurgePlanPayload {
+function assertServerPurgePlanPayload(payload: unknown): asserts payload is ServerPurgePlanPayload {
 	if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
 		throw new ServerPurgeError('server_purge_invalid_plan');
 	}

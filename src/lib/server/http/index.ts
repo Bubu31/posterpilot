@@ -1,6 +1,5 @@
 import { eq } from 'drizzle-orm';
 import pRetry, { AbortError } from 'p-retry';
-import pLimit, { type LimitFunction } from 'p-limit';
 import { db } from '$lib/server/db';
 import { httpCache } from '$lib/server/db/schema';
 import { parseRetryAfter } from './retry-after';
@@ -158,12 +157,7 @@ export async function fetchJson<T = unknown>(url: string, opts: FetchOptions = {
 	return JSON.parse(text) as T;
 }
 
-/** Create a concurrency limiter (wraps p-limit) for bounded fan-out. */
-export function createLimiter(concurrency: number): LimitFunction {
-	return pLimit(Math.max(1, concurrency));
-}
-
 /** Await a fixed delay — used to space out polite scraping requests. */
-export function delay(ms: number): Promise<void> {
+function delay(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }

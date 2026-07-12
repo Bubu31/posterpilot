@@ -195,7 +195,7 @@ function rowNumber(row: Row | undefined, name: string, index: number): number {
  * Build a live-safe SQLite copy. `VACUUM INTO` owns the consistency boundary;
  * checkpointing is only a retry path and is never followed by a raw file copy.
  */
-export async function createConsistentSqliteSnapshot(
+async function createConsistentSqliteSnapshot(
 	databaseClient: Pick<Client, 'execute'>,
 	destination: string
 ): Promise<{ checkpointFallback: boolean }> {

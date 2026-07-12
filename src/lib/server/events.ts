@@ -6,10 +6,10 @@ import { formatEventLine, type EventLevel } from './events-format';
 import { appendLogLine } from './log-file';
 import { sanitizeSupportEntry } from './support-bundle/sanitize';
 
-export { formatEventLine, type EventLevel } from './events-format';
+export { type EventLevel } from './events-format';
 
 /** Fallback row cap used when the configured `eventRetention` is unavailable. */
-export const EVENT_RETENTION = 2000;
+const EVENT_RETENTION = 2000;
 
 /** Prune roughly every this-many inserts, to keep the table bounded cheaply. */
 const PRUNE_EVERY = 50;

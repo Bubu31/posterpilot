@@ -283,7 +283,6 @@ export async function saveApplicationBackupRetentionPolicy(
 
 export type { BackupKeySource, BackupRecordStore, CreatedBackupBundle } from './create';
 export { BackupServiceError } from './errors';
-export { asBackupServiceError };
 export type { BackupServiceErrorCode } from './errors';
 export type {
 	BackupRetentionResult,

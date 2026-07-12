@@ -78,7 +78,7 @@ export type ArtworkUndoRuntimeErrorCode =
 	| 'plan_stale';
 
 /** Locale-neutral runtime failure. No path, URL, credential, or YAML value is retained. */
-export class ArtworkUndoRuntimeError extends Error {
+class ArtworkUndoRuntimeError extends Error {
 	constructor(readonly code: ArtworkUndoRuntimeErrorCode | string) {
 		super(code);
 		this.name = 'ArtworkUndoRuntimeError';

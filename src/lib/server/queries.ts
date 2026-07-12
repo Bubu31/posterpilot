@@ -26,7 +26,6 @@ import {
 	jobs,
 	mediaItems,
 	posterCandidates,
-	serverInstances,
 	type MediaItem
 } from './db/schema';
 import { groupByProvider, groupCandidatesBySet } from './posters/sets';
@@ -445,12 +444,6 @@ export async function listFunItemsByIds(
 	});
 }
 
-/** Compatibility helper for the original single-result picker. */
-export async function pickRandomItem(filter: PickFilter): Promise<FunChoiceItem | null> {
-	const seed = filter.seed ?? `${Date.now()}-${Math.random()}`;
-	return (await pickFunChoices({ ...filter, count: 1 }, seed))[0] ?? null;
-}
-
 export interface FunLibraryBounds {
 	yearMin: number | null;
 	yearMax: number | null;
@@ -507,33 +500,6 @@ export async function listFunLibraries(
 		)
 		.groupBy(mediaItems.sectionKey, mediaItems.type)
 		.orderBy(asc(mediaItems.sectionKey), asc(mediaItems.type));
-}
-
-/** Named servers and the library keys currently represented in the local index. */
-export async function listFunServerScopes(): Promise<FunServerScope[]> {
-	const [servers, libraries] = await Promise.all([
-		db
-			.select({ id: serverInstances.id, name: serverInstances.name, type: serverInstances.type })
-			.from(serverInstances)
-			.where(eq(serverInstances.enabled, true))
-			.orderBy(asc(serverInstances.name)),
-		db
-			.select({
-				serverInstanceId: mediaItems.serverInstanceId,
-				key: mediaItems.sectionKey,
-				type: mediaItems.type
-			})
-			.from(mediaItems)
-			.where(isNull(mediaItems.sourceRemovedAt))
-			.groupBy(mediaItems.serverInstanceId, mediaItems.sectionKey, mediaItems.type)
-			.orderBy(asc(mediaItems.sectionKey))
-	]);
-	return servers.map((server) => ({
-		...server,
-		libraries: libraries
-			.filter((library) => library.serverInstanceId === server.id)
-			.map(({ key, type }) => ({ key, type }))
-	}));
 }
 
 /** Items with at least two distinct root-poster candidates, suitable for a bracket. */

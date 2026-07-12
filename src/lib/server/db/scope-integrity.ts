@@ -15,7 +15,7 @@ const NAMESPACE_ROOTS = ['media_items', 'media_collections'] as const;
  * Older restore snapshots are supported: a relation is checked only after the child
  * has both the reference and `server_instance_id` columns introduced by migration 0008.
  */
-export const SCOPE_RELATIONS: readonly ScopeRelation[] = [
+const SCOPE_RELATIONS: readonly ScopeRelation[] = [
 	{
 		name: 'poster_candidates.media_item_id',
 		childTable: 'poster_candidates',

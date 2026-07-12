@@ -22,11 +22,6 @@ export interface BackupRetentionPolicyUpdate {
 	maxAgeDays?: number | null;
 }
 
-export const DEFAULT_BACKUP_RETENTION_POLICY: BackupRetentionPolicy = {
-	maxCount: null,
-	maxAgeDays: null
-};
-
 function parseStoredLimit(
 	value: string | undefined,
 	minimum: number,
@@ -44,7 +39,7 @@ function validateLimit(value: number | null, minimum: number, maximum: number): 
 	}
 }
 
-export function validateRetentionPolicy(policy: BackupRetentionPolicy): void {
+function validateRetentionPolicy(policy: BackupRetentionPolicy): void {
 	validateLimit(policy.maxCount, 0, MAX_COUNT_LIMIT);
 	validateLimit(policy.maxAgeDays, 1, MAX_AGE_DAYS_LIMIT);
 }

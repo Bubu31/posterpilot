@@ -87,13 +87,7 @@ export interface AppConfig {
 }
 
 /** Config keys that are secrets — never returned to the client, redacted in logs. */
-export const SECRET_KEYS = [
-	'plexToken',
-	'jellyfinApiKey',
-	'embyApiKey',
-	'tmdbKey',
-	'fanartKey'
-] as const;
+const SECRET_KEYS = ['plexToken', 'jellyfinApiKey', 'embyApiKey', 'tmdbKey', 'fanartKey'] as const;
 type ConfigKey = keyof AppConfig;
 
 /** Settings key -> environment variable name. Env always overrides persisted settings. */
@@ -166,7 +160,7 @@ const DEFAULTS = {
 };
 
 /** Persisted-settings keys that the UI is allowed to write. */
-export const WRITABLE_KEYS: ConfigKey[] = [
+const WRITABLE_KEYS: ConfigKey[] = [
 	'serverType',
 	'plexUrl',
 	'plexToken',
@@ -321,12 +315,12 @@ export async function resolveConfig(): Promise<AppConfig> {
 }
 
 /** True when a key is sourced from the environment (and thus locked from UI editing). */
-export function isEnvManaged(key: ConfigKey): boolean {
+function isEnvManaged(key: ConfigKey): boolean {
 	const v = env[ENV_MAP[key]];
 	return v !== undefined && v !== '';
 }
 
-export class MissingConfigError extends Error {
+class MissingConfigError extends Error {
 	constructor(public readonly missing: ConfigKey[]) {
 		super(`Missing required configuration: ${missing.join(', ')}`);
 		this.name = 'MissingConfigError';
@@ -339,24 +333,6 @@ export function requireConfig(config: AppConfig, keys: ConfigKey[]): void {
 		(k) => config[k] === null || config[k] === undefined || config[k] === ''
 	);
 	if (missing.length) throw new MissingConfigError(missing);
-}
-
-/** The credential keys required for a given active server type. */
-export function requiredKeysFor(serverType: ServerType): ConfigKey[] {
-	switch (serverType) {
-		case 'jellyfin':
-			return ['jellyfinUrl', 'jellyfinApiKey'];
-		case 'emby':
-			return ['embyUrl', 'embyApiKey'];
-		case 'plex':
-		default:
-			return ['plexUrl', 'plexToken'];
-	}
-}
-
-/** Throw MissingConfigError if the active server type's credentials are unset. */
-export function requireActiveServer(config: AppConfig): void {
-	requireConfig(config, requiredKeysFor(config.serverType));
 }
 
 /**
@@ -645,10 +621,7 @@ export async function bumpAuthSessionVersion(): Promise<number> {
 // callers that already depend on config (e.g. the settings route).
 export {
 	getArtworkRankingSettings,
-	getProviderPriority,
-	getScoreWeights,
-	setArtworkRankingSettings,
-	setScoreWeights
+	setArtworkRankingSettings
 } from '$lib/server/posters/score-weights';
 
 /** Persist UI-supplied settings. Empty string clears a key. Ignores non-writable keys. */
@@ -762,5 +735,3 @@ export async function publicConfig(serverInstanceId?: string): Promise<PublicCon
 		envManaged
 	};
 }
-
-export { redact } from './redact';

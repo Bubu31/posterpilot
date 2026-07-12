@@ -13,12 +13,7 @@ import {
 	type RetryOutcomeProjection
 } from './retry-plan';
 
-export {
-	buildRetryPayloads,
-	JobRetryError,
-	latestRetryableFailures,
-	type RetryOutcomeProjection
-} from './retry-plan';
+export { JobRetryError, type RetryOutcomeProjection } from './retry-plan';
 
 const RETRYABLE_PARENT_STATUSES = ['partial_failed', 'failed', 'interrupted'] as const;
 

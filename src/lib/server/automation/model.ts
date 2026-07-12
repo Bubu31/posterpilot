@@ -8,9 +8,9 @@ import {
 	type AutomationTriggerType
 } from './schedule';
 
-export const AUTOMATION_EVENT_TYPES = ['sync_completed', 'new_items'] as const;
-export const AUTOMATION_ACTIONS = ['sync', 'sync_discover'] as const;
-export const AUTOMATION_PROVIDER_IDS = ['mediux', 'tmdb', 'fanarttv', 'theposterdb'] as const;
+const AUTOMATION_EVENT_TYPES = ['sync_completed', 'new_items'] as const;
+const AUTOMATION_ACTIONS = ['sync', 'sync_discover'] as const;
+const AUTOMATION_PROVIDER_IDS = ['mediux', 'tmdb', 'fanarttv', 'theposterdb'] as const;
 
 export type AutomationEventType = (typeof AUTOMATION_EVENT_TYPES)[number];
 export type AutomationAction = (typeof AUTOMATION_ACTIONS)[number];
@@ -138,7 +138,7 @@ function safeIdentifier(value: unknown, field: string): string | null {
 	return value;
 }
 
-export function normalizeAutomationName(value: string): { name: string; normalizedName: string } {
+function normalizeAutomationName(value: string): { name: string; normalizedName: string } {
 	if (typeof value !== 'string') invalid('invalid_name', 'name');
 	const name = value.normalize('NFKC').trim().replace(/\s+/g, ' ');
 	const hasControlCharacter = [...name].some((character) => {

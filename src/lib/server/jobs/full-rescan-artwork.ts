@@ -418,5 +418,3 @@ export function createDatabaseFullRescanArtworkObserver(
 		ledger: options.ledger ?? createArtworkRevisionLedger(database)
 	});
 }
-
-export const FULL_RESCAN_ROOT_ARTWORK_KINDS = ROOT_KINDS;
