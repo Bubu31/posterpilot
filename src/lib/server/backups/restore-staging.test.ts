@@ -41,6 +41,22 @@ function bundleManifest(databaseChecksum: string): BackupManifestV1 {
 	};
 }
 
+function keyedManifest(
+	databaseChecksum: string,
+	keyChecksum: string,
+	keyBytes: number
+): BackupManifestV1 {
+	const base = bundleManifest(databaseChecksum);
+	return {
+		...base,
+		key: { mode: 'generated', fingerprint: 'f'.repeat(64), included: true },
+		files: [
+			...base.files,
+			{ path: 'app-key', role: 'application_key', sizeBytes: keyBytes, sha256: keyChecksum }
+		]
+	};
+}
+
 beforeEach(() => {
 	directory = mkdtempSync(join(tmpdir(), 'posterpilot-stage-'));
 	bundle = join(directory, 'bundle');
@@ -91,5 +107,95 @@ describe('restore staging and boot commit', () => {
 		).rejects.toThrow('staged_restore_checksum_mismatch');
 		expect(existsSync(paths.restore.pendingMarker)).toBe(false);
 		expect(existsSync(join(paths.restore.stagingDirectory, restore.restoreId))).toBe(false);
+	});
+
+	it('refuses to stage while another restore is already pending', async () => {
+		const database = join(bundle, 'database.db');
+		writeFileSync(database, 'new database');
+		mkdirSync(join(directory, 'data'), { recursive: true });
+		writeFileSync(paths.restore.pendingMarker, '{}');
+
+		await expect(
+			stageApplicationRestore({
+				dataPaths: paths,
+				bundleDirectory: bundle,
+				manifest: bundleManifest(sha256File(database)),
+				restore
+			})
+		).rejects.toThrow('restore_already_pending');
+		expect(existsSync(paths.restore.stagingDirectory)).toBe(false);
+	});
+
+	it('refuses to stage while a previous restore still requires rollback recovery', async () => {
+		const database = join(bundle, 'database.db');
+		writeFileSync(database, 'new database');
+		mkdirSync(paths.restore.rollbackDirectory, { recursive: true });
+		writeFileSync(paths.restore.rollbackMarker, '{}');
+
+		await expect(
+			stageApplicationRestore({
+				dataPaths: paths,
+				bundleDirectory: bundle,
+				manifest: bundleManifest(sha256File(database)),
+				restore
+			})
+		).rejects.toThrow('restore_recovery_required');
+		expect(existsSync(paths.restore.pendingMarker)).toBe(false);
+		expect(existsSync(paths.restore.stagingDirectory)).toBe(false);
+	});
+
+	it('rejects a manifest without a database payload before touching staging', async () => {
+		await expect(
+			stageApplicationRestore({
+				dataPaths: paths,
+				bundleDirectory: bundle,
+				manifest: { ...bundleManifest('a'.repeat(64)), files: [] },
+				restore
+			})
+		).rejects.toThrow('restore_database_missing');
+		expect(existsSync(paths.restore.pendingMarker)).toBe(false);
+		expect(existsSync(paths.restore.stagingDirectory)).toBe(false);
+	});
+
+	it('rejects a staged application key that is not exactly 32 bytes and cleans up', async () => {
+		const database = join(bundle, 'database.db');
+		writeFileSync(database, 'new database');
+		const keyFile = join(bundle, 'app-key');
+		writeFileSync(keyFile, Buffer.alloc(31, 7));
+
+		await expect(
+			stageApplicationRestore({
+				dataPaths: paths,
+				bundleDirectory: bundle,
+				manifest: keyedManifest(sha256File(database), sha256File(keyFile), 31),
+				restore
+			})
+		).rejects.toThrow('restore_key_invalid');
+		expect(existsSync(paths.restore.pendingMarker)).toBe(false);
+		expect(existsSync(join(paths.restore.stagingDirectory, restore.restoreId))).toBe(false);
+	});
+
+	it('stages a 32-byte application key and records it in the pending marker', async () => {
+		const database = join(bundle, 'database.db');
+		writeFileSync(database, 'new database');
+		const keyFile = join(bundle, 'app-key');
+		writeFileSync(keyFile, Buffer.alloc(32, 7));
+		const keyChecksum = sha256File(keyFile);
+
+		await stageApplicationRestore({
+			dataPaths: paths,
+			bundleDirectory: bundle,
+			manifest: keyedManifest(sha256File(database), keyChecksum, 32),
+			restore
+		});
+
+		const stagedKey = join(paths.restore.stagingDirectory, restore.restoreId, '.app-key');
+		expect(readFileSync(stagedKey)).toEqual(Buffer.alloc(32, 7));
+		expect(JSON.parse(readFileSync(paths.restore.pendingMarker, 'utf8'))).toMatchObject({
+			version: 1,
+			stagedDatabase: { sha256: sha256File(database) },
+			stagedKey: { path: stagedKey, sha256: keyChecksum },
+			restore
+		});
 	});
 });

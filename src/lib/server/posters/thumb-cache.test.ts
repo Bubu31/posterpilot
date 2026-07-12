@@ -5,7 +5,13 @@ import { describe, expect, it, vi } from 'vitest';
 // $env-free — mirrors the pattern in service.test.ts.
 vi.mock('$lib/server/db', () => ({ db: {} }));
 
-import { hashUrl, isExpired, readBoundedThumbBody, selectEvictions } from './thumb-cache';
+import {
+	hashUrl,
+	isExpired,
+	readBoundedThumbBody,
+	selectEvictions,
+	selectOrphanedCacheFiles
+} from './thumb-cache';
 
 describe('hashUrl', () => {
 	it('is stable for the same URL', () => {
@@ -68,6 +74,27 @@ describe('selectEvictions', () => {
 	it('ignores input ordering and always evicts by accessedAt', () => {
 		const shuffled = [entries[2], entries[0], entries[1]];
 		expect(selectEvictions(shuffled, 150)).toEqual(['old', 'mid']);
+	});
+});
+
+describe('selectOrphanedCacheFiles', () => {
+	const hashA = hashUrl('https://example.com/a.jpg');
+	const hashB = hashUrl('https://example.com/b.jpg');
+
+	it('returns cache files with no index row', () => {
+		expect(selectOrphanedCacheFiles([hashA, hashB], new Set([hashA]))).toEqual([hashB]);
+	});
+
+	it('returns nothing when every file is indexed', () => {
+		expect(selectOrphanedCacheFiles([hashA, hashB], new Set([hashA, hashB]))).toEqual([]);
+	});
+
+	it('ignores names that are not sha256-hex cache files', () => {
+		expect(selectOrphanedCacheFiles(['.DS_Store', 'notes.txt', 'ABCDEF'], new Set())).toEqual([]);
+	});
+
+	it('handles an empty directory', () => {
+		expect(selectOrphanedCacheFiles([], new Set([hashA]))).toEqual([]);
 	});
 });
 
