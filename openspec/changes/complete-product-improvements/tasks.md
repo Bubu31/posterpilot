@@ -125,4 +125,4 @@
 - [x] 13.2 Run `bun run check` with zero errors, `bun run test`, `bun run build`, and `bun run lint` successfully.
 - [x] 13.3 Run manual smoke/a11y/reduced-motion checks against a seeded multi-server instance, including cache freshness, restore rollback, and exact preview/confirm flows.
 - [x] 13.4 Validate OpenSpec strictly, self-review the full diff for secrets/migrations/i18n/scope safety, and update every completed task checkbox accurately.
-- [ ] 13.5 Create intentional conventional commits, push `codex/product-improvements`, and open a draft PR with risks, migrations, screenshots, and verification evidence; leave merge to the maintainer.
+- [x] 13.5 Create intentional conventional commits, push `codex/product-improvements`, and open a draft PR with risks, migrations, screenshots, and verification evidence; leave merge to the maintainer.
