@@ -12,6 +12,9 @@ import globals from 'globals';
 export default ts.config(
 	{
 		ignores: [
+			'.agents/**',
+			'.codex/**',
+			'AGENTS.md',
 			'src/lib/paraglide/**',
 			'build/**',
 			'.svelte-kit/**',

@@ -10,6 +10,7 @@
 import { requiredKeysFor, type AppConfig, type ServerType } from '$lib/server/config';
 import { plexProvider } from './plex';
 import { embyLikeProvider } from './emby';
+import { mediaServerIdentity, normalizeMediaServerCapabilities } from './capabilities';
 import type { MediaServer } from './types';
 
 export type {
@@ -18,10 +19,23 @@ export type {
 	ServerItem,
 	ServerChild,
 	ServerLibrary,
+	ServerNativeCollection,
+	ServerNativeCollectionMember,
 	ConnectionResult,
 	ConnectionCandidate,
-	LockField
+	LockField,
+	MediaServerIdentity,
+	MediaServerCapabilities,
+	CapabilitySupport,
+	ServerArtwork,
+	ServerArtworkKind
 } from './types';
+
+export {
+	defaultMediaServerCapabilities,
+	mediaServerIdentity,
+	normalizeMediaServerCapabilities
+} from './capabilities';
 
 /** Which config keys the active server type needs (re-exported for callers). */
 export { requiredKeysFor } from '$lib/server/config';
@@ -31,6 +45,36 @@ export interface ActiveServerResult {
 	server: MediaServer | null;
 	/** Config keys that are missing for the active type; empty when `server` is set. */
 	missing: string[];
+}
+
+/** Credentials-bound input used by the named-server registry. */
+export interface MediaServerConnection {
+	instanceId?: string | null;
+	name?: string | null;
+	type: ServerType;
+	baseUrl: string;
+	credential: string;
+	capabilities?: Record<string, unknown> | null;
+}
+
+/**
+ * Construct a provider for one explicit server instance. Keeping this factory here
+ * prevents apply/jobs from importing provider implementations or falling back to
+ * whichever legacy server happens to be active.
+ */
+export function createMediaServer(connection: MediaServerConnection): MediaServer {
+	const context = {
+		identity: mediaServerIdentity(connection.type, connection.instanceId, connection.name),
+		capabilities: normalizeMediaServerCapabilities(connection.type, connection.capabilities)
+	};
+	switch (connection.type) {
+		case 'plex':
+			return plexProvider(connection.baseUrl, connection.credential, context);
+		case 'jellyfin':
+			return embyLikeProvider(connection.baseUrl, connection.credential, 'jellyfin', context);
+		case 'emby':
+			return embyLikeProvider(connection.baseUrl, connection.credential, 'emby', context);
+	}
 }
 
 /**
@@ -46,22 +90,21 @@ export function resolveActiveServer(config: AppConfig): ActiveServerResult {
 	});
 	if (missing.length) return { server: null, missing };
 
-	switch (config.serverType) {
-		case 'plex':
-			return { server: plexProvider(config.plexUrl!, config.plexToken!), missing: [] };
-		case 'jellyfin':
-			return {
-				server: embyLikeProvider(config.jellyfinUrl!, config.jellyfinApiKey!, 'jellyfin'),
-				missing: []
-			};
-		case 'emby':
-			return {
-				server: embyLikeProvider(config.embyUrl!, config.embyApiKey!, 'emby'),
-				missing: []
-			};
-		default:
-			return { server: null, missing: required };
-	}
+	const connection =
+		config.serverType === 'plex'
+			? { type: 'plex' as const, baseUrl: config.plexUrl!, credential: config.plexToken! }
+			: config.serverType === 'jellyfin'
+				? {
+						type: 'jellyfin' as const,
+						baseUrl: config.jellyfinUrl!,
+						credential: config.jellyfinApiKey!
+					}
+				: {
+						type: 'emby' as const,
+						baseUrl: config.embyUrl!,
+						credential: config.embyApiKey!
+					};
+	return { server: createMediaServer(connection), missing: [] };
 }
 
 /**

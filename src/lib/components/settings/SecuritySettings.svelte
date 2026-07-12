@@ -44,9 +44,9 @@
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify(body)
 			});
-			const result = (await res.json().catch(() => ({}))) as { error?: string };
+			await res.json().catch(() => ({}));
 			if (!res.ok) {
-				authError = result.error ?? m.security_save_error();
+				authError = m.security_save_error();
 				toasts.error(authError);
 				return;
 			}

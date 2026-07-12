@@ -1,22 +1,32 @@
 import { dirname as posixDirname } from 'node:path/posix';
-import { and, asc, desc, eq, isNotNull, isNull } from 'drizzle-orm';
+import { randomUUID } from 'node:crypto';
+import { and, eq, isNotNull, isNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
 	appliedPosters,
 	childSelections,
 	mediaItems,
 	posterCandidates,
+	providerDiscoveryOutcomes,
+	providerDiscoveryRuns,
 	type MediaItem
 } from '$lib/server/db/schema';
 import type { AppConfig, ApplyMethod } from '$lib/server/config';
-import { resolveActiveServer, serverTypeLabel } from '$lib/server/media-server';
+import { redact } from '$lib/server/config/redact';
 import type { MediaServer, ServerChild } from '$lib/server/media-server';
+import { resolveMediaServerInstance } from '$lib/server/server-instances';
 import { writeKometaYaml, type KometaSeasonInput } from '$lib/server/kometa/yaml';
 import { logEvent } from '$lib/server/events';
 import { resolveChildOps, seasonsNeedingEpisodes, type StagedChildSlot } from './child-apply';
-import { availableProviders, type ProviderId } from './providers';
+import { PROVIDERS } from './providers';
+import { providerAvailability } from './providers/availability';
 import { scorePoster } from './score';
 import { getScoreWeights } from './score-weights';
+import {
+	selectAutomaticArtwork,
+	type AutomaticArtworkSelection,
+	type AutomaticSelectionInputs
+} from './automatic-selection';
 
 /**
  * Where posterpilot.yml is written: co-located with config.yml when Kometa
@@ -26,125 +36,269 @@ function kometaOutDir(config: AppConfig): string {
 	return config.kometaConfigPath ? posixDirname(config.kometaConfigPath) : config.kometaAssetsDir;
 }
 
-/**
- * Discover artwork candidates for an item across all enabled providers and persist
- * them (replacing any prior candidates), tagging each with its provider. A provider
- * that fails is skipped so the others still contribute. Returns the candidate count.
- */
+/** Discover per provider without erasing last-known-good data when one source fails. */
 export async function discoverForItem(
 	item: MediaItem,
 	config: AppConfig,
-	opts?: { forceRefresh?: boolean }
+	opts?: { forceRefresh?: boolean; providers?: readonly string[] }
 ): Promise<number> {
-	const providers = availableProviders(config);
-	const settled = await Promise.allSettled(
-		providers.map((p) =>
-			p
-				.discover(item, config, { forceRefresh: opts?.forceRefresh })
-				.then((sets) => ({ provider: p.id, sets }))
-		)
-	);
-
-	// A provider that errored is skipped (the others still contribute) but its
-	// failure is worth a warn so it shows up in the activity log.
-	for (let i = 0; i < settled.length; i++) {
-		const r = settled[i];
-		if (r.status === 'rejected') {
-			const reason = r.reason;
-			await logEvent(
-				'warn',
-				'provider',
-				`${providers[i].id} discovery failed for "${item.title}"`,
-				{
-					provider: providers[i].id,
-					title: item.title,
-					error: reason instanceof Error ? reason.message : String(reason)
-				}
-			);
-		}
+	const requestedProviders = opts?.providers ? new Set(opts.providers) : null;
+	const providers = requestedProviders
+		? PROVIDERS.filter((provider) => requestedProviders.has(provider.id))
+		: PROVIDERS;
+	if (requestedProviders && providers.length !== requestedProviders.size) {
+		throw new TypeError('discovery_provider_scope_invalid');
 	}
-
-	// Scoring weights are read once per discovery; each candidate gets a score so the
-	// UI can pre-select the best one and auto-select can rank across providers.
-	const weights = await getScoreWeights();
-	const rows = settled
-		.filter(
-			(
-				r
-			): r is PromiseFulfilledResult<{
-				provider: ProviderId;
-				sets: Awaited<ReturnType<(typeof providers)[number]['discover']>>;
-			}> => r.status === 'fulfilled'
-		)
-		.flatMap((r) =>
-			r.value.sets.flatMap((set) =>
-				set.candidates.map((c) => {
-					const width = c.width ?? null;
-					const height = c.height ?? null;
-					return {
-						mediaItemId: item.id,
-						provider: r.value.provider,
-						setId: c.setId,
-						setAuthor: c.setAuthor,
-						url: c.url,
-						kind: c.kind,
-						season: c.season,
-						episode: c.episode,
-						width,
-						height,
-						score: scorePoster({ provider: r.value.provider, width, height, kind: c.kind }, weights)
-					};
-				})
-			)
-		);
-
-	await db.delete(posterCandidates).where(eq(posterCandidates.mediaItemId, item.id));
-	if (rows.length) await db.insert(posterCandidates).values(rows);
+	const runId = randomUUID();
+	const startedAt = new Date();
+	await db.insert(providerDiscoveryRuns).values({
+		id: runId,
+		serverInstanceId: item.serverInstanceId,
+		mediaItemId: item.id,
+		tmdbId: item.tmdbId,
+		mediaType: item.mediaType,
+		status: 'running',
+		startedAt
+	});
 	await db
 		.update(mediaItems)
-		.set({ hasMediux: rows.length > 0, updatedAt: new Date() })
-		.where(eq(mediaItems.id, item.id));
+		.set({ discoveryStatus: 'running', discoveryStartedAt: startedAt, updatedAt: startedAt })
+		.where(and(eq(mediaItems.serverInstanceId, item.serverInstanceId), eq(mediaItems.id, item.id)));
 
-	// Per-item info when covers were found (kept to the found case to bound volume).
-	if (rows.length) {
-		await logEvent('info', 'discover', `Found ${rows.length} covers for "${item.title}"`, {
-			title: item.title,
-			count: rows.length
-		});
-	}
+	const weights = await getScoreWeights();
+	let attempted = 0;
+	let succeeded = 0;
+	let failures = 0;
 
-	return rows.length;
-}
+	await Promise.all(
+		providers.map(async (provider) => {
+			const availability = providerAvailability(provider.id, config);
+			const providerStarted = new Date();
+			const scope = and(
+				eq(posterCandidates.serverInstanceId, item.serverInstanceId),
+				eq(posterCandidates.mediaItemId, item.id),
+				eq(posterCandidates.provider, provider.id)
+			);
+			if (availability !== 'available') {
+				await db.update(posterCandidates).set({ active: false, stale: true }).where(scope);
+				await db.insert(providerDiscoveryOutcomes).values({
+					runId,
+					serverInstanceId: item.serverInstanceId,
+					mediaItemId: item.id,
+					provider: provider.id,
+					status: availability,
+					candidateCount: 0,
+					startedAt: providerStarted,
+					completedAt: new Date()
+				});
+				return;
+			}
 
-/**
- * Auto-select a primary poster across providers by the configurable scoring model:
- * the highest-scored poster candidate wins. SQLite orders NULL scores last under
- * DESC, so legacy candidates without a score fall back to earliest-inserted.
- */
-export async function autoSelectPoster(itemId: number): Promise<string | null> {
-	const rows = await db
-		.select()
+			attempted += 1;
+			try {
+				const sets = await provider.discover(item, config, { forceRefresh: opts?.forceRefresh });
+				const candidates = sets.flatMap((set) =>
+					set.candidates.map((candidate) => {
+						const width = candidate.width ?? null;
+						const height = candidate.height ?? null;
+						return {
+							serverInstanceId: item.serverInstanceId,
+							mediaItemId: item.id,
+							discoveryRunId: runId,
+							provider: provider.id,
+							setId: candidate.setId,
+							setAuthor: candidate.setAuthor,
+							url: candidate.url,
+							kind: candidate.kind,
+							season: candidate.season,
+							episode: candidate.episode,
+							resolvedTmdbId: item.tmdbId,
+							resolvedMediaType: item.mediaType,
+							width,
+							height,
+							score: scorePoster(
+								{ provider: provider.id, width, height, kind: candidate.kind },
+								weights
+							),
+							active: true,
+							stale: false,
+							lastSeenAt: new Date()
+						};
+					})
+				);
+				await db.transaction(async (tx) => {
+					const [outcome] = await tx
+						.insert(providerDiscoveryOutcomes)
+						.values({
+							runId,
+							serverInstanceId: item.serverInstanceId,
+							mediaItemId: item.id,
+							provider: provider.id,
+							status: candidates.length ? 'succeeded' : 'empty',
+							candidateCount: candidates.length,
+							latencyMs: Date.now() - providerStarted.getTime(),
+							lastSuccessAt: new Date(),
+							startedAt: providerStarted,
+							completedAt: new Date()
+						})
+						.returning({ id: providerDiscoveryOutcomes.id });
+					await tx.delete(posterCandidates).where(scope);
+					if (candidates.length) {
+						await tx
+							.insert(posterCandidates)
+							.values(
+								candidates.map((candidate) => ({ ...candidate, providerOutcomeId: outcome.id }))
+							);
+					}
+				});
+				succeeded += 1;
+			} catch (error) {
+				failures += 1;
+				const retained = await db
+					.select({ id: posterCandidates.id })
+					.from(posterCandidates)
+					.where(and(scope, eq(posterCandidates.active, true)));
+				await db.update(posterCandidates).set({ stale: true }).where(scope);
+				const rawError = error instanceof Error ? error.message : String(error);
+				const safeError = redact(rawError, config).slice(0, 500);
+				const timedOut = /timed?\s*out|abort/i.test(rawError);
+				await db.insert(providerDiscoveryOutcomes).values({
+					runId,
+					serverInstanceId: item.serverInstanceId,
+					mediaItemId: item.id,
+					provider: provider.id,
+					status: timedOut ? 'timed_out' : 'failed',
+					candidateCount: retained.length,
+					retainedStaleCandidates: retained.length > 0,
+					latencyMs: Date.now() - providerStarted.getTime(),
+					errorCode: timedOut ? 'provider_timeout' : 'provider_failed',
+					error: safeError,
+					startedAt: providerStarted,
+					completedAt: new Date()
+				});
+				await logEvent('warn', 'provider', `${provider.id} discovery failed for "${item.title}"`, {
+					provider: provider.id,
+					title: item.title,
+					serverInstanceId: item.serverInstanceId,
+					mediaItemId: item.id,
+					error: safeError,
+					retained: retained.length
+				});
+			}
+		})
+	);
+
+	const activeCandidates = await db
+		.select({ provider: posterCandidates.provider })
 		.from(posterCandidates)
-		.where(and(eq(posterCandidates.mediaItemId, itemId), eq(posterCandidates.kind, 'poster')))
-		.orderBy(desc(posterCandidates.score), asc(posterCandidates.id))
-		.limit(1);
-	return rows[0]?.url ?? null;
-}
-
-/** Record a user's pending cover selection for an item. */
-export async function selectCandidate(
-	itemId: number,
-	posterUrl: string | null,
-	backgroundUrl?: string | null
-): Promise<void> {
+		.where(
+			and(
+				eq(posterCandidates.serverInstanceId, item.serverInstanceId),
+				eq(posterCandidates.mediaItemId, item.id),
+				eq(posterCandidates.active, true)
+			)
+		);
+	const runStatus = failures === 0 ? 'succeeded' : succeeded > 0 ? 'partial' : 'failed';
+	const discoveryStatus =
+		failures > 0
+			? succeeded > 0
+				? 'partial'
+				: 'failed'
+			: activeCandidates.length
+				? 'succeeded'
+				: 'empty';
+	const completedAt = new Date();
+	await db
+		.update(providerDiscoveryRuns)
+		.set({ status: runStatus, completedAt })
+		.where(eq(providerDiscoveryRuns.id, runId));
 	await db
 		.update(mediaItems)
 		.set({
-			selectedPosterUrl: posterUrl,
-			selectedBackgroundUrl: backgroundUrl ?? null,
-			updatedAt: new Date()
+			hasCandidates: activeCandidates.length > 0,
+			hasMediux: activeCandidates.some((candidate) => candidate.provider === 'mediux'),
+			discoveryStatus,
+			discoveryCompletedAt: completedAt,
+			updatedAt: completedAt
 		})
-		.where(eq(mediaItems.id, itemId));
+		.where(and(eq(mediaItems.serverInstanceId, item.serverInstanceId), eq(mediaItems.id, item.id)));
+
+	if (activeCandidates.length) {
+		await logEvent(
+			'info',
+			'discover',
+			`Found ${activeCandidates.length} covers for "${item.title}"`,
+			{
+				title: item.title,
+				serverInstanceId: item.serverInstanceId,
+				mediaItemId: item.id,
+				count: activeCandidates.length,
+				attempted
+			}
+		);
+	}
+	return activeCandidates.length;
+}
+
+/** Select poster, background, and every child slot with frozen, explainable provenance. */
+export async function autoSelectArtwork(
+	itemId: number,
+	inputs: Omit<AutomaticSelectionInputs, 'weights'> & {
+		weights?: AutomaticSelectionInputs['weights'];
+	} = {}
+): Promise<AutomaticArtworkSelection> {
+	const [rows, weights] = await Promise.all([
+		db
+			.select()
+			.from(posterCandidates)
+			.where(and(eq(posterCandidates.mediaItemId, itemId), eq(posterCandidates.active, true))),
+		inputs.weights ? Promise.resolve(inputs.weights) : getScoreWeights()
+	]);
+	return selectAutomaticArtwork(rows, { ...inputs, weights });
+}
+
+/** Compatibility helper for callers that only need the selected root poster URL. */
+export async function autoSelectPoster(itemId: number): Promise<string | null> {
+	return (await autoSelectArtwork(itemId)).poster?.url ?? null;
+}
+
+async function requireItemServerInstanceId(itemId: number): Promise<string> {
+	const [item] = await db
+		.select({ serverInstanceId: mediaItems.serverInstanceId })
+		.from(mediaItems)
+		.where(eq(mediaItems.id, itemId))
+		.limit(1);
+	if (!item) throw new Error(`Media item ${itemId} was not found`);
+	return item.serverInstanceId;
+}
+
+export interface ArtworkSelectionPatch {
+	posterUrl?: string | null;
+	backgroundUrl?: string | null;
+	posterCandidateId?: number | null;
+	backgroundCandidateId?: number | null;
+}
+
+/** Record only the supplied pending slots, preserving every omitted selection. */
+export async function selectCandidate(
+	itemId: number,
+	selection: ArtworkSelectionPatch
+): Promise<void> {
+	const patch: Partial<typeof mediaItems.$inferInsert> = {
+		selectionUpdatedAt: new Date(),
+		updatedAt: new Date()
+	};
+	if (Object.hasOwn(selection, 'posterUrl')) patch.selectedPosterUrl = selection.posterUrl ?? null;
+	if (Object.hasOwn(selection, 'backgroundUrl')) {
+		patch.selectedBackgroundUrl = selection.backgroundUrl ?? null;
+	}
+	if (Object.hasOwn(selection, 'posterCandidateId')) {
+		patch.selectedPosterCandidateId = selection.posterCandidateId ?? null;
+	}
+	if (Object.hasOwn(selection, 'backgroundCandidateId')) {
+		patch.selectedBackgroundCandidateId = selection.backgroundCandidateId ?? null;
+	}
+	await db.update(mediaItems).set(patch).where(eq(mediaItems.id, itemId));
 }
 
 /**
@@ -158,6 +312,8 @@ export async function selectChild(
 	slot: { kind: 'poster' | 'background' | 'title_card'; season: number; episode: number | null },
 	url: string | null
 ): Promise<void> {
+	const serverInstanceId = await requireItemServerInstanceId(itemId);
+	const changedAt = new Date();
 	const { kind, season, episode } = slot;
 	const episodeMatch =
 		episode === null ? isNull(childSelections.episode) : eq(childSelections.episode, episode);
@@ -165,6 +321,7 @@ export async function selectChild(
 		.delete(childSelections)
 		.where(
 			and(
+				eq(childSelections.serverInstanceId, serverInstanceId),
 				eq(childSelections.mediaItemId, itemId),
 				eq(childSelections.kind, kind),
 				eq(childSelections.season, season),
@@ -172,10 +329,20 @@ export async function selectChild(
 			)
 		);
 	if (url) {
-		await db
-			.insert(childSelections)
-			.values({ mediaItemId: itemId, kind, season, episode, url, updatedAt: new Date() });
+		await db.insert(childSelections).values({
+			serverInstanceId,
+			mediaItemId: itemId,
+			kind,
+			season,
+			episode,
+			url,
+			updatedAt: changedAt
+		});
 	}
+	await db
+		.update(mediaItems)
+		.set({ selectionUpdatedAt: changedAt, updatedAt: changedAt })
+		.where(and(eq(mediaItems.id, itemId), eq(mediaItems.serverInstanceId, serverInstanceId)));
 }
 
 /**
@@ -193,7 +360,9 @@ export async function selectChildrenBulk(
 	}[]
 ): Promise<void> {
 	if (!slots.length) return;
+	const serverInstanceId = await requireItemServerInstanceId(itemId);
 	await db.transaction(async (tx) => {
+		const changedAt = new Date();
 		for (const s of slots) {
 			const episodeMatch =
 				s.episode === null
@@ -203,6 +372,7 @@ export async function selectChildrenBulk(
 				.delete(childSelections)
 				.where(
 					and(
+						eq(childSelections.serverInstanceId, serverInstanceId),
 						eq(childSelections.mediaItemId, itemId),
 						eq(childSelections.kind, s.kind),
 						eq(childSelections.season, s.season),
@@ -210,23 +380,34 @@ export async function selectChildrenBulk(
 					)
 				);
 			await tx.insert(childSelections).values({
+				serverInstanceId,
 				mediaItemId: itemId,
 				kind: s.kind,
 				season: s.season,
 				episode: s.episode,
 				url: s.url,
-				updatedAt: new Date()
+				updatedAt: changedAt
 			});
 		}
+		await tx
+			.update(mediaItems)
+			.set({ selectionUpdatedAt: changedAt, updatedAt: changedAt })
+			.where(and(eq(mediaItems.id, itemId), eq(mediaItems.serverInstanceId, serverInstanceId)));
 	});
 }
 
 /** Read an item's staged child selections as pure slots for apply/UI hydration. */
 export async function getChildSelections(itemId: number): Promise<StagedChildSlot[]> {
+	const serverInstanceId = await requireItemServerInstanceId(itemId);
 	const rows = await db
 		.select()
 		.from(childSelections)
-		.where(eq(childSelections.mediaItemId, itemId));
+		.where(
+			and(
+				eq(childSelections.serverInstanceId, serverInstanceId),
+				eq(childSelections.mediaItemId, itemId)
+			)
+		);
 	return rows.map((r) => ({ kind: r.kind, season: r.season, episode: r.episode, url: r.url }));
 }
 
@@ -280,7 +461,7 @@ export async function applyToItem(
 			let children: ChildApplySummary | undefined;
 			if (childSlots.length && item.type === 'show') {
 				try {
-					const server = requireActiveServerOrThrow(config);
+					const { server } = await requireItemServerOrThrow(item);
 					const { ops, skipped } = await resolveChildrenForServer(
 						server,
 						item.ratingKey,
@@ -316,11 +497,13 @@ export async function applyToItem(
 	if (doServer) {
 		// Persisted as 'plex' (the direct-server method) for schema compatibility,
 		// but routed through whichever provider is active.
-		const serverLabel = serverTypeLabel(config.serverType);
+		let serverLabel = 'media server';
 		let outcome: ApplyOutcome = { method: 'plex', status: 'success' };
 		let children: ChildApplySummary = { applied: 0, failed: 0, skipped: 0 };
 		try {
-			const server = requireActiveServerOrThrow(config);
+			const resolved = await requireItemServerOrThrow(item);
+			const server = resolved.server;
+			serverLabel = resolved.connection.name;
 			if (posterUrl) await server.applyPosterUrl(item.ratingKey, posterUrl);
 			if (backgroundUrl && server.applyBackgroundUrl) {
 				await server.applyBackgroundUrl(item.ratingKey, backgroundUrl);
@@ -333,6 +516,7 @@ export async function applyToItem(
 		// Record a show-level row only when a show poster was part of this apply.
 		if (posterUrl) {
 			await db.insert(appliedPosters).values({
+				serverInstanceId: item.serverInstanceId,
 				mediaItemId: item.id,
 				url: posterUrl,
 				method: 'plex',
@@ -343,6 +527,8 @@ export async function applyToItem(
 		if (outcome.status === 'success') {
 			await logEvent('info', 'apply', `Applied artwork to "${item.title}" via ${serverLabel}`, {
 				title: item.title,
+				serverInstanceId: item.serverInstanceId,
+				mediaItemId: item.id,
 				method: 'plex',
 				url: posterUrl ?? undefined,
 				children
@@ -354,6 +540,8 @@ export async function applyToItem(
 				`Failed to apply artwork to "${item.title}" via ${serverLabel}`,
 				{
 					title: item.title,
+					serverInstanceId: item.serverInstanceId,
+					mediaItemId: item.id,
 					method: 'plex',
 					error: outcome.error
 				}
@@ -382,6 +570,7 @@ export async function applyToItem(
 		}
 		if (posterUrl) {
 			await db.insert(appliedPosters).values({
+				serverInstanceId: item.serverInstanceId,
 				mediaItemId: item.id,
 				url: posterUrl,
 				method: 'kometa',
@@ -392,12 +581,16 @@ export async function applyToItem(
 		if (outcome.status === 'success') {
 			await logEvent('info', 'apply', `Applied artwork to "${item.title}" via Kometa`, {
 				title: item.title,
+				serverInstanceId: item.serverInstanceId,
+				mediaItemId: item.id,
 				method: 'kometa',
 				url: posterUrl ?? undefined
 			});
 		} else {
 			await logEvent('error', 'apply', `Failed to apply artwork to "${item.title}" via Kometa`, {
 				title: item.title,
+				serverInstanceId: item.serverInstanceId,
+				mediaItemId: item.id,
 				method: 'kometa',
 				error: outcome.error
 			});
@@ -445,6 +638,8 @@ async function applyChildrenToServer(
 	} catch (e) {
 		await logEvent('error', 'apply', `Could not list children for "${item.title}"`, {
 			title: item.title,
+			serverInstanceId: item.serverInstanceId,
+			mediaItemId: item.id,
 			error: errorMessage(e)
 		});
 		return { applied: 0, failed: slots.length, skipped: 0 };
@@ -470,6 +665,7 @@ async function applyChildrenToServer(
 			failed++;
 		}
 		await db.insert(appliedPosters).values({
+			serverInstanceId: item.serverInstanceId,
 			mediaItemId: item.id,
 			url: op.url,
 			method: 'plex',
@@ -516,15 +712,9 @@ function errorMessage(e: unknown): string {
 	return e instanceof Error ? e.message : String(e);
 }
 
-/** Resolve the active media-server provider, or throw a clear missing-config error. */
-function requireActiveServerOrThrow(config: AppConfig) {
-	const { server, missing } = resolveActiveServer(config);
-	if (!server) {
-		throw new Error(
-			`${serverTypeLabel(config.serverType)} is not configured (missing: ${missing.join(', ')})`
-		);
-	}
-	return server;
+/** Resolve the provider that owns this exact item; never fall back to another active server. */
+async function requireItemServerOrThrow(item: Pick<MediaItem, 'serverInstanceId'>) {
+	return resolveMediaServerInstance(item.serverInstanceId, { requireEnabled: true });
 }
 
 /**
@@ -537,11 +727,12 @@ export async function applyCustomUpload(
 	item: MediaItem,
 	data: ArrayBuffer,
 	contentType: string,
-	config: AppConfig
+	_config: AppConfig
 ): Promise<void> {
-	const server = requireActiveServerOrThrow(config);
+	const { server, connection } = await requireItemServerOrThrow(item);
 	await server.applyPosterBytes(item.ratingKey, data, contentType);
 	await db.insert(appliedPosters).values({
+		serverInstanceId: item.serverInstanceId,
 		mediaItemId: item.id,
 		url: 'custom-upload',
 		method: 'plex',
@@ -550,8 +741,13 @@ export async function applyCustomUpload(
 	await logEvent(
 		'info',
 		'apply',
-		`Applied custom upload to "${item.title}" via ${serverTypeLabel(config.serverType)}`,
-		{ title: item.title, method: 'upload' }
+		`Applied custom upload to "${item.title}" via ${connection.name}`,
+		{
+			title: item.title,
+			method: 'upload',
+			serverInstanceId: item.serverInstanceId,
+			mediaItemId: item.id
+		}
 	);
 }
 
@@ -577,10 +773,10 @@ export interface RevertScope {
  */
 export async function revertItem(
 	item: MediaItem,
-	config: AppConfig,
+	_config: AppConfig,
 	scope?: RevertScope
 ): Promise<{ reverted: number; skipped: number }> {
-	const server = requireActiveServerOrThrow(config);
+	const { server, connection } = await requireItemServerOrThrow(item);
 	const season = scope?.season;
 	const fullScope = season === undefined;
 
@@ -656,9 +852,14 @@ export async function revertItem(
 		'info',
 		'apply',
 		fullScope
-			? `Reverted "${item.title}" to its original cover on ${serverTypeLabel(config.serverType)}`
-			: `Reverted season ${season} of "${item.title}" on ${serverTypeLabel(config.serverType)}`,
-		{ title: item.title, season: fullScope ? undefined : season }
+			? `Reverted "${item.title}" to its original cover on ${connection.name}`
+			: `Reverted season ${season} of "${item.title}" on ${connection.name}`,
+		{
+			title: item.title,
+			season: fullScope ? undefined : season,
+			serverInstanceId: item.serverInstanceId,
+			mediaItemId: item.id
+		}
 	);
 	return { reverted, skipped };
 }

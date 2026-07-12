@@ -3,6 +3,7 @@ import type { RequestHandler } from './$types';
 import { saveSettings } from '$lib/server/config';
 import { loginByName, MediaServerLoginError } from '$lib/server/media-server/emby';
 import { logEvent } from '$lib/server/events';
+import { materializeLegacyServerInstance } from '$lib/server/server-instances';
 
 /**
  * Log in to Jellyfin/Emby with a username + password, exchanging them for an access
@@ -41,6 +42,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		} else {
 			await saveSettings({ serverType: 'emby', embyUrl: baseUrl, embyApiKey: result.accessToken });
 		}
+		await materializeLegacyServerInstance();
 		await logEvent('info', 'settings', `Logged in to ${flavor}`, { user: result.userName });
 		return json({ ok: true, userName: result.userName });
 	} catch (e) {

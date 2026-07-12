@@ -7,7 +7,8 @@ const h = vi.hoisted(() => ({
 	applyPosterUrl: vi.fn<(...a: unknown[]) => Promise<void>>(),
 	applyBackgroundUrl: vi.fn<(...a: unknown[]) => Promise<void>>(),
 	writeKometaYaml: vi.fn<(...a: unknown[]) => Promise<void>>(),
-	inserts: [] as Record<string, unknown>[]
+	inserts: [] as Record<string, unknown>[],
+	serverConfigured: true
 }));
 
 // db: applyToItem only ever calls db.insert(appliedPosters).values({...}).
@@ -22,22 +23,16 @@ vi.mock('$lib/server/db', () => ({
 	}
 }));
 
-// The active media-server provider: resolveActiveServer returns a fake MediaServer
-// whose poster/background applies are spied. When the config lacks the active
-// provider's credentials it reports the missing keys (mirroring the real factory).
-vi.mock('$lib/server/media-server', () => ({
-	serverTypeLabel: (t: string) => t,
-	resolveActiveServer: (cfg: Record<string, unknown>) => {
-		if (!cfg.plexUrl || !cfg.plexToken) {
-			return { server: null, missing: ['plexUrl', 'plexToken'].filter((k) => !cfg[k]) };
-		}
+vi.mock('$lib/server/server-instances', () => ({
+	resolveMediaServerInstance: async (id: string) => {
+		if (!h.serverConfigured) throw new Error('server instance is not configured');
 		return {
+			connection: { id, name: 'Home Plex', type: 'plex' },
 			server: {
 				type: 'plex',
 				applyPosterUrl: h.applyPosterUrl,
 				applyBackgroundUrl: h.applyBackgroundUrl
-			},
-			missing: []
+			}
 		};
 	}
 }));
@@ -52,7 +47,8 @@ const item = {
 	id: 1,
 	ratingKey: '1001',
 	title: 'Fight Club',
-	tmdbId: '550'
+	tmdbId: '550',
+	serverInstanceId: 'server-a'
 } as unknown as MediaItem;
 
 const config = {
@@ -68,6 +64,7 @@ describe('applyToItem', () => {
 		h.applyBackgroundUrl.mockReset().mockResolvedValue(undefined);
 		h.writeKometaYaml.mockReset().mockResolvedValue(undefined);
 		h.inserts.length = 0;
+		h.serverConfigured = true;
 	});
 
 	it('applies via the active server only and records success', async () => {
@@ -137,6 +134,7 @@ describe('applyToItem', () => {
 	});
 
 	it('records a server failure when the active provider is unconfigured', async () => {
+		h.serverConfigured = false;
 		const outcomes = await applyToItem(item, {
 			posterUrl: 'u',
 			method: 'plex',
