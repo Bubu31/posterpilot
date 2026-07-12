@@ -41,13 +41,23 @@
 			</label>
 			<label class="block">
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_session_films()}</span>
-				<select name="films" value={data.filmCount} class="input w-full">
+				<select
+					name="films"
+					value={data.filmCount}
+					aria-label={m.fun_session_films()}
+					class="input w-full"
+				>
 					<option value="2">2</option><option value="3">3</option>
 				</select>
 			</label>
 			<label class="block">
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_library_label()}</span>
-				<select name="library" value={data.filter.librarySectionKey ?? ''} class="input w-full">
+				<select
+					name="library"
+					value={data.filter.librarySectionKey ?? ''}
+					aria-label={m.fun_library_label()}
+					class="input w-full"
+				>
 					<option value="">{m.fun_library_all()}</option>
 					{#each data.libraries as library (`${library.key}:${library.type}`)}
 						<option value={library.key}>{library.key}</option>
@@ -56,7 +66,12 @@
 			</label>
 			<label class="block">
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_genre_label()}</span>
-				<select name="genre" value={data.filter.genre ?? ''} class="input w-full">
+				<select
+					name="genre"
+					value={data.filter.genre ?? ''}
+					aria-label={m.fun_genre_label()}
+					class="input w-full"
+				>
 					<option value="">{m.fun_genre_all()}</option>
 					{#each data.genres as genre (genre)}<option value={genre}>{genre}</option>{/each}
 				</select>

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { invalidateAll, goto } from '$app/navigation';
-	import { tick } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { SvelteSet } from 'svelte/reactivity';
 	import { m } from '$lib/paraglide/messages';
 	import { setLocale } from '$lib/paraglide/runtime';
@@ -10,6 +10,10 @@
 	import { jobStatusLabel } from '$lib/job-labels';
 
 	let { data } = $props();
+	let hydrated = $state(false);
+	onMount(() => {
+		hydrated = true;
+	});
 
 	const steps = [
 		{ title: m.setup_step_language, desc: m.setup_step_language_desc },
@@ -176,8 +180,26 @@
 		busy = true;
 		stepError = null;
 		testMsg = null;
+		const startingStep = step;
+		// The locale write can cause the locale strategy to refresh the route. Move
+		// to the server step synchronously so that refresh cannot recreate the
+		// language step while the click handler is awaiting its request.
+		if (startingStep === 0) {
+			step = 1;
+			void focusStepHeading();
+		}
 		try {
-			if (step === 1) {
+			if (startingStep === 0) {
+				// Persist even the already-selected default locale. Relying only on the
+				// select's change event makes English users lose their progress after
+				// an invalidation or reload because no change event ever fires.
+				await postSettings({ language });
+				// Re-enter the same route from persisted state. Locale strategies may
+				// refresh the layout while this write is in flight; an explicit route
+				// navigation makes the resumable server-derived step authoritative.
+				await goto('/setup', { invalidateAll: true, replaceState: true, noScroll: true });
+				return;
+			} else if (startingStep === 1) {
 				const payload: Record<string, unknown> = { serverType };
 				if (serverType === 'plex') {
 					payload.plexUrl = plexUrl;
@@ -189,9 +211,9 @@
 					if (embyApiKey) payload.embyApiKey = embyApiKey;
 				}
 				await postSettings(payload);
-			} else if (step === 2) {
+			} else if (startingStep === 2) {
 				if (tmdbKey) await postSettings({ tmdbKey });
-			} else if (step === 3) {
+			} else if (startingStep === 3) {
 				const payload: Record<string, unknown> = {
 					providerMediux: String(providerMediux),
 					providerTmdb: String(providerTmdb),
@@ -200,20 +222,24 @@
 				};
 				if (fanartKey) payload.fanartKey = fanartKey;
 				await postSettings(payload);
-			} else if (step === LIBRARIES_STEP) {
+			} else if (startingStep === LIBRARIES_STEP) {
 				// All known libraries selected → [] (sync everything, incl. future ones).
 				await postSettings({
 					includedSections: allSelected ? [] : [...selectedSections]
 				});
 			}
-			await invalidateAll();
-			if (step < total - 1) {
+			if (startingStep !== 0 && step < total - 1) {
 				step += 1;
 				await focusStepHeading();
 				// Arriving at the Libraries step: fetch the server's libraries live.
-				if (step === LIBRARIES_STEP) refreshLibraries();
+				if (step === LIBRARIES_STEP) void refreshLibraries();
 			}
+			// Let the visible wizard advance as soon as its write succeeds. Root/page
+			// data can refresh in the background; awaiting invalidation here allowed a
+			// concurrent loader remount to strand the user on the completed step.
+			void invalidateAll();
 		} catch (e) {
+			if (startingStep === 0) step = 0;
 			stepError = m.setup_save_failed({ error: e instanceof Error ? e.message : String(e) });
 		} finally {
 			busy = false;
@@ -594,7 +620,11 @@
 				{#if step > 0}
 					<button onclick={back} class="btn btn-ghost px-4 py-2">{m.setup_back()}</button>
 				{/if}
-				<button onclick={next} disabled={busy} class="btn btn-accent ml-auto px-4 py-2">
+				<button
+					onclick={next}
+					disabled={busy || !hydrated}
+					class="btn btn-accent ml-auto px-4 py-2"
+				>
 					{busy ? m.setup_saving() : m.setup_next()}
 				</button>
 			</div>

@@ -204,6 +204,12 @@ describe('server instance encrypted CRUD', () => {
 });
 
 describe('active server persistence', () => {
+	it('resolves a fresh installation concurrently without opening write transactions', async () => {
+		const active = await Promise.all(Array.from({ length: 12 }, () => store().getActive()));
+		expect(active).toEqual(Array.from({ length: 12 }, () => null));
+		expect(await activeSetting()).toBeUndefined();
+	});
+
 	it('selects the first server, persists explicit changes, and repairs a disabled active id', async () => {
 		const first = await store().create({
 			name: 'First',

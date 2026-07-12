@@ -48,9 +48,9 @@
 
 	// Register the client locale strategy and seed it with the locale the server
 	// resolved for this page so hydration matches SSR.
-	registerClientLocaleStrategy();
 	// svelte-ignore state_referenced_locally
 	seedClientLocale(data.locale);
+	registerClientLocaleStrategy();
 
 	const links = $derived([
 		{ href: '/', label: m.nav_dashboard() },
@@ -79,6 +79,7 @@
 		currentResolved: boolean;
 	};
 	let update = $state<Update | null>(null);
+	let appHydrated = $state(false);
 
 	// "What's new" modal. Two intents share it: 'current' shows the notes for the
 	// version you're running (post-upgrade), 'latest' previews the available
@@ -140,6 +141,7 @@
 	}
 
 	onMount(() => {
+		appHydrated = true;
 		// Decide whether to show the "What's new" modal only once the check resolves.
 		void refreshUpdate().then(maybeShowWhatsNew);
 
@@ -209,7 +211,7 @@
 	}
 </script>
 
-<div class="min-h-screen">
+<div class="min-h-screen" data-app-hydrated={appHydrated ? 'true' : undefined}>
 	<header class="sticky top-0 z-20 border-b border-neutral-800 bg-neutral-950/80 backdrop-blur">
 		<div
 			class="mx-auto flex min-h-14 max-w-7xl flex-wrap items-center gap-3 px-4 py-2 lg:h-14 lg:flex-nowrap lg:gap-6 lg:py-0"

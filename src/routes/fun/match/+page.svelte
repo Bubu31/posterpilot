@@ -75,7 +75,13 @@
 	<form method="GET" action="/fun/match" class="surface flex flex-wrap items-end gap-3 p-5">
 		<label class="min-w-64 flex-1">
 			<span class="mb-1 block text-xs text-neutral-400">{m.fun_match_item()}</span>
-			<select name="item" value={data.selectedItem?.id ?? ''} class="input w-full" required>
+			<select
+				name="item"
+				value={data.selectedItem?.id ?? ''}
+				aria-label={m.fun_match_item()}
+				class="input w-full"
+				required
+			>
 				<option value="" disabled>{m.fun_match_choose_item()}</option>
 				{#each data.items as item (item.id)}
 					<option value={item.id}>{item.title} {item.year ? `(${item.year})` : ''}</option>

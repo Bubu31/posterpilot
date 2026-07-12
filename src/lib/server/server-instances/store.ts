@@ -450,21 +450,25 @@ export function createServerInstanceStore(
 	}
 
 	async function getActive(): Promise<ServerInstanceSummary | null> {
-		// The normal path is read-only. Avoid opening a transaction on every layout
-		// request; concurrent page loads otherwise contend on SQLite even though the
-		// active setting is already valid.
+		// Request-time resolution is deliberately read-only. The create/update/
+		// disable/disconnect paths repair the persisted pointer transactionally; doing
+		// that here makes the root layout and page loaders race for a SQLite write lock
+		// on a fresh install, when there is not even a server to select yet.
 		const storedId = await activeSetting(database);
 		if (storedId) {
 			const stored = await findRow(database, storedId);
 			if (isSelectable(stored)) return toSummary(stored);
 		}
 
-		// Only stale/missing state needs the transactional repair performed by
-		// `ensureActive`.
-		return database.transaction(async (tx) => {
-			const row = await ensureActive(tx);
-			return row ? toSummary(row) : null;
-		});
+		const fallback = (
+			await database
+				.select()
+				.from(serverInstances)
+				.where(and(eq(serverInstances.enabled, true), isNull(serverInstances.disconnectedAt)))
+				.orderBy(asc(serverInstances.createdAt), asc(serverInstances.name))
+				.limit(1)
+		)[0];
+		return fallback ? toSummary(fallback) : null;
 	}
 
 	async function materializeLegacy(

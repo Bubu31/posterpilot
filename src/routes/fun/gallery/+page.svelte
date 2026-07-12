@@ -137,7 +137,12 @@
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
 			<label>
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_gallery_artwork()}</span>
-				<select name="artwork" value={data.mode} class="input w-full">
+				<select
+					name="artwork"
+					value={data.mode}
+					aria-label={m.fun_gallery_artwork()}
+					class="input w-full"
+				>
 					<option value="mixed">{m.fun_gallery_mixed()}</option>
 					<option value="poster">{m.item_posters()}</option>
 					<option value="background">{m.item_backdrops()}</option>
@@ -145,7 +150,12 @@
 			</label>
 			<label>
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_gallery_interval()}</span>
-				<select name="interval" value={data.intervalSeconds} class="input w-full">
+				<select
+					name="interval"
+					value={data.intervalSeconds}
+					aria-label={m.fun_gallery_interval()}
+					class="input w-full"
+				>
 					{#each [3, 5, 8, 12, 20] as seconds (seconds)}
 						<option value={seconds}>{m.fun_gallery_seconds({ count: seconds })}</option>
 					{/each}
@@ -153,7 +163,12 @@
 			</label>
 			<label>
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_library_label()}</span>
-				<select name="library" value={data.filter.librarySectionKey ?? ''} class="input w-full">
+				<select
+					name="library"
+					value={data.filter.librarySectionKey ?? ''}
+					aria-label={m.fun_library_label()}
+					class="input w-full"
+				>
 					<option value="">{m.fun_library_all()}</option>
 					{#each data.libraries as library (`${library.key}:${library.type}`)}
 						<option value={library.key}>{library.key}</option>
@@ -162,7 +177,12 @@
 			</label>
 			<label>
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_type_label()}</span>
-				<select name="type" value={data.filter.type ?? ''} class="input w-full">
+				<select
+					name="type"
+					value={data.filter.type ?? ''}
+					aria-label={m.fun_type_label()}
+					class="input w-full"
+				>
 					<option value="">{m.fun_type_both()}</option>
 					<option value="movie">{m.library_type_movies()}</option>
 					<option value="show">{m.library_type_shows()}</option>
@@ -170,7 +190,12 @@
 			</label>
 			<label>
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_genre_label()}</span>
-				<select name="genre" value={data.filter.genre ?? ''} class="input w-full">
+				<select
+					name="genre"
+					value={data.filter.genre ?? ''}
+					aria-label={m.fun_genre_label()}
+					class="input w-full"
+				>
 					<option value="">{m.fun_genre_all()}</option>
 					{#each data.genres as genre (genre)}<option value={genre}>{genre}</option>{/each}
 				</select>

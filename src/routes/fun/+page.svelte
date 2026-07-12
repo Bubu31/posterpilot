@@ -69,7 +69,12 @@
 		<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
 			<label class="block">
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_preset_label()}</span>
-				<select name="preset" value={data.filter.preset ?? ''} class="input w-full">
+				<select
+					name="preset"
+					value={data.filter.preset ?? ''}
+					aria-label={m.fun_preset_label()}
+					class="input w-full"
+				>
 					<option value="">{m.fun_preset_none()}</option>
 					<option value="movie-night">{m.fun_preset_movie_night()}</option>
 					<option value="quick-watch">{m.fun_preset_quick()}</option>
@@ -80,7 +85,12 @@
 
 			<label class="block">
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_library_label()}</span>
-				<select name="library" value={data.filter.librarySectionKey ?? ''} class="input w-full">
+				<select
+					name="library"
+					value={data.filter.librarySectionKey ?? ''}
+					aria-label={m.fun_library_label()}
+					class="input w-full"
+				>
 					<option value="">{m.fun_library_all()}</option>
 					{#each data.libraries as library (`${library.key}:${library.type}`)}
 						<option value={library.key}>{library.key}</option>
@@ -93,7 +103,12 @@
 
 			<label class="block">
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_type_label()}</span>
-				<select name="type" value={data.filter.type ?? ''} class="input w-full">
+				<select
+					name="type"
+					value={data.filter.type ?? ''}
+					aria-label={m.fun_type_label()}
+					class="input w-full"
+				>
 					<option value="">{m.fun_type_both()}</option>
 					<option value="movie">{m.library_type_movies()}</option>
 					<option value="show">{m.library_type_shows()}</option>
@@ -105,7 +120,12 @@
 
 			<label class="block">
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_genre_label()}</span>
-				<select name="genre" value={data.filter.genre ?? ''} class="input w-full">
+				<select
+					name="genre"
+					value={data.filter.genre ?? ''}
+					aria-label={m.fun_genre_label()}
+					class="input w-full"
+				>
 					<option value="">{m.fun_genre_all()}</option>
 					{#each data.genres as genre (genre)}<option value={genre}>{genre}</option>{/each}
 				</select>
@@ -183,6 +203,7 @@
 				<select
 					name="addedWithinDays"
 					value={data.filter.addedWithinDays ?? ''}
+					aria-label={m.fun_recency_label()}
 					class="input w-full"
 				>
 					<option value="">{m.fun_recency_any()}</option>
@@ -194,7 +215,12 @@
 
 			<label class="block">
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_choice_count()}</span>
-				<select name="count" value={data.filter.count} class="input w-full">
+				<select
+					name="count"
+					value={data.filter.count}
+					aria-label={m.fun_choice_count()}
+					class="input w-full"
+				>
 					<option value="1">1</option>
 					<option value="2">2</option>
 					<option value="3">3</option>
@@ -203,7 +229,12 @@
 
 			<label class="block">
 				<span class="mb-1 block text-xs text-neutral-400">{m.fun_mode_label()}</span>
-				<select name="mode" value={data.filter.mode} class="input w-full">
+				<select
+					name="mode"
+					value={data.filter.mode}
+					aria-label={m.fun_mode_label()}
+					class="input w-full"
+				>
 					<option value="standard">{m.fun_mode_standard()}</option>
 					<option value="blind">{m.fun_mode_blind()}</option>
 					<option value="capsule">{m.fun_mode_capsule()}</option>
@@ -275,7 +306,6 @@
 									type="button"
 									onclick={() => revealChoice(item.id, item.title)}
 									class="btn btn-accent"
-									aria-label={m.fun_reveal_choice()}
 								>
 									{data.filter.mode === 'capsule' ? m.fun_open_capsule() : m.fun_reveal_choice()}
 								</button>

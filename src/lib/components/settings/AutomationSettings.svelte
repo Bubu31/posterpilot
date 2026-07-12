@@ -478,7 +478,11 @@
 			</label>
 			<label class="text-sm text-neutral-300">
 				{m.automation_trigger()}
-				<select bind:value={triggerType} class="input mt-1 w-full">
+				<select
+					bind:value={triggerType}
+					aria-label={m.automation_trigger()}
+					class="input mt-1 w-full"
+				>
 					<option value="daily">{m.automation_trigger_daily()}</option>
 					<option value="interval">{m.automation_trigger_interval()}</option>
 					<option value="event">{m.automation_trigger_event()}</option>
@@ -504,7 +508,11 @@
 			{:else}
 				<label class="text-sm text-neutral-300">
 					{m.automation_event_type()}
-					<select bind:value={eventType} class="input mt-1 w-full">
+					<select
+						bind:value={eventType}
+						aria-label={m.automation_event_type()}
+						class="input mt-1 w-full"
+					>
 						<option value="new_items">{m.automation_event_new_items()}</option>
 						<option value="sync_completed">{m.automation_event_sync_completed()}</option>
 					</select>
@@ -521,7 +529,7 @@
 			</label>
 			<label class="text-sm text-neutral-300">
 				{m.automation_action()}
-				<select bind:value={action} class="input mt-1 w-full">
+				<select bind:value={action} aria-label={m.automation_action()} class="input mt-1 w-full">
 					<option value="sync_discover">{m.automation_action_sync_discover()}</option>
 					<option value="sync">{m.automation_action_sync()}</option>
 				</select>
@@ -547,7 +555,11 @@
 
 			<label class="text-sm text-neutral-300 sm:col-span-2">
 				{m.automation_review_view()}
-				<select bind:value={reviewViewId} class="input mt-1 w-full">
+				<select
+					bind:value={reviewViewId}
+					aria-label={m.automation_review_view()}
+					class="input mt-1 w-full"
+				>
 					<option value="">{m.automation_review_view_none()}</option>
 					{#each reviewViews as view (view.id)}<option value={view.id}>{view.name}</option>{/each}
 				</select>

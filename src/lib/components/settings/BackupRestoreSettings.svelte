@@ -282,8 +282,12 @@
 	async function savePolicy() {
 		if (busy) return;
 		resetFeedback();
-		const count = maxCount.trim() === '' ? null : Number(maxCount);
-		const age = maxAgeDays.trim() === '' ? null : Number(maxAgeDays);
+		// Numeric bindings start from our server string, become numbers after input,
+		// and yield `null` when cleared. Normalize all three states before validating.
+		const countText = maxCount == null ? '' : String(maxCount).trim();
+		const ageText = maxAgeDays == null ? '' : String(maxAgeDays).trim();
+		const count = countText === '' ? null : Number(countText);
+		const age = ageText === '' ? null : Number(ageText);
 		if (
 			(count !== null && (!Number.isSafeInteger(count) || count < 0)) ||
 			(age !== null && (!Number.isSafeInteger(age) || age < 1))

@@ -63,9 +63,9 @@
 	}
 </script>
 
-<div class="max-w-xl space-y-5">
+<section class="max-w-xl space-y-5" aria-labelledby="security-settings-title">
 	<div>
-		<h2 class="text-sm font-semibold">{m.security_title()}</h2>
+		<h2 id="security-settings-title" class="text-sm font-semibold">{m.security_title()}</h2>
 		<p class="mt-1 text-sm text-neutral-400">{m.security_intro()}</p>
 	</div>
 
@@ -143,4 +143,4 @@
 			>{/if}
 		{#if authError}<span class="text-sm text-red-300" role="alert">{authError}</span>{/if}
 	</div>
-</div>
+</section>

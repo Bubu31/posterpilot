@@ -468,7 +468,7 @@
 			</label>
 			<label class="text-sm text-neutral-300">
 				{m.server_manager_type()}
-				<select bind:value={addType} class="input mt-1 w-full">
+				<select bind:value={addType} aria-label={m.server_manager_type()} class="input mt-1 w-full">
 					<option value="plex">Plex</option>
 					<option value="jellyfin">Jellyfin</option>
 					<option value="emby">Emby</option>
@@ -660,7 +660,11 @@
 							</label>
 							<label class="text-sm text-neutral-300">
 								{m.server_manager_type()}
-								<select bind:value={editType} class="input mt-1 w-full">
+								<select
+									bind:value={editType}
+									aria-label={m.server_manager_type()}
+									class="input mt-1 w-full"
+								>
 									<option value="plex">Plex</option>
 									<option value="jellyfin">Jellyfin</option>
 									<option value="emby">Emby</option>
