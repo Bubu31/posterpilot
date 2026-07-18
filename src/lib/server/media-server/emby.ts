@@ -21,7 +21,6 @@ import {
 	parseAuthResult,
 	scopeEmbyCollectionMembers,
 	type AuthResult,
-	type RawEmbyItem,
 	type RawEmbyItemsResponse
 } from './emby-parse';
 import { defaultMediaServerCapabilities, mediaServerIdentity } from './capabilities';
@@ -210,7 +209,14 @@ export function embyLikeProvider(
 	}
 
 	async function readCurrentArtwork(itemId: string, kind: 'poster' | 'background') {
-		const item = await getJson<RawEmbyItem>(`/Items/${encodeURIComponent(itemId)}`);
+		// Bare `GET /Items/{id}` (no `/Users/{userId}/` prefix) returns HTTP 400 on
+		// Jellyfin 10.11.x. `GET /Items?Ids={id}` is accepted on both Jellyfin and
+		// Emby and returns the same item shape, so use it unconditionally.
+		const itemsResult = await getJson<RawEmbyItemsResponse>(
+			`/Items?Ids=${encodeURIComponent(itemId)}`
+		);
+		const item = itemsResult.Items?.[0];
+		if (!item) return null;
 		const imageType = kind === 'poster' ? ('Primary' as const) : ('Backdrop' as const);
 		const identity = kind === 'poster' ? item.ImageTags?.Primary : item.BackdropImageTags?.[0];
 		if (!identity) return null;
@@ -370,6 +376,10 @@ export function embyLikeProvider(
 
 		async applyCollectionBackgroundUrl(collectionId: string, url: string): Promise<void> {
 			const { data, contentType } = await fetchImage(url);
+			// Jellyfin/Emby treat Backdrop as a list rather than a single slot: a bare
+			// POST appends a new entry instead of replacing index 0. Delete the
+			// existing backdrop first so applying a new one actually replaces it.
+			await deleteCurrentArtwork(collectionId, 'background');
 			await postImage(collectionId, 'Backdrop', data, contentType);
 		},
 
@@ -378,6 +388,7 @@ export function embyLikeProvider(
 			data,
 			contentType = 'image/jpeg'
 		): Promise<void> {
+			await deleteCurrentArtwork(collectionId, 'background');
 			await postImage(collectionId, 'Backdrop', data, contentType);
 		},
 
@@ -424,10 +435,13 @@ export function embyLikeProvider(
 
 		async applyBackgroundUrl(itemId: string, url: string): Promise<void> {
 			const { data, contentType } = await fetchImage(url);
+			// See applyCollectionBackgroundUrl: replace, don't append.
+			await deleteCurrentArtwork(itemId, 'background');
 			await postImage(itemId, 'Backdrop', data, contentType);
 		},
 
 		async applyBackgroundBytes(itemId, data, contentType = 'image/jpeg'): Promise<void> {
+			await deleteCurrentArtwork(itemId, 'background');
 			await postImage(itemId, 'Backdrop', data, contentType);
 		},
 
