@@ -137,12 +137,41 @@ export function parseThePosterDbSearchResults(html: string): ThePosterDbSearchRe
 }
 
 // A title's poster-collection page serves real images from this CDN path once
-// authenticated; anonymous requests get a `missing_poster.jpg` placeholder instead.
+// authenticated; anonymous requests get a `missing_poster.jpg` placeholder instead. Used
+// as a fallback below if the per-card structure changes shape and CARD_RE stops matching.
 const ASSET_RE =
 	/https:\/\/images\.theposterdb\.com\/prod\/public\/images\/posters\/optimized\/(?:movies|shows)\/\d+\/[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/g;
 
-/** Extract real poster asset URLs from a ThePosterDB title/poster-collection page. */
+// Each card on a title's poster-collection page is one contributor's poster for that
+// title: a <picture> with webp + jpeg <source> variants of the same image (only the webp
+// is captured here — matching both would report the same poster twice, which is exactly
+// the "duplicate" images this used to produce), a numeric poster id, an "uploaded by
+// <user>" byline, and a link to that contributor's set. Grouping by that set/author, the
+// same way the MediUX provider already does, is what lets the UI show "by <user>" per set
+// instead of one flat unattributed blob. Bounded lookaheads (rather than unbounded
+// `[\s\S]*?`) keep a malformed/missing field on one card from binding to the next card's
+// data instead of just failing to match.
+const CARD_RE =
+	/<source class="w-100 rounded-poster" type="image\/webp" srcset="(https:\/\/images\.theposterdb\.com\/prod\/public\/images\/posters\/optimized\/(?:movies|shows)\/\d+\/[A-Za-z0-9_-]+\.webp)">[\s\S]{0,1500}?data-poster-id='(\d+)'[\s\S]{0,600}?uploaded-by[^>]*>by <a href="https:\/\/theposterdb\.com\/user\/[^"]+">([^<]+)<\/a>[\s\S]{0,600}?href="https:\/\/theposterdb\.com\/set\/(\d+)"/g;
+
+/** Extract real poster asset URLs (grouped by contributor set) from a ThePosterDB title page. */
 export function parseThePosterDbAssets(html: string): ArtworkSet[] {
+	const seen = new Set<string>();
+	const sets: ArtworkSet[] = [];
+	for (const [, url, posterId, rawAuthor, tpdbSetId] of html.matchAll(CARD_RE)) {
+		// The same poster can appear more than once when a card has linked/related sets.
+		if (seen.has(posterId)) continue;
+		seen.add(posterId);
+		const setId = `theposterdb-${tpdbSetId}-${posterId}`;
+		const author = rawAuthor.trim();
+		sets.push({
+			setId,
+			author,
+			candidates: [{ setId, setAuthor: author, url, kind: 'poster', season: null, episode: null }]
+		});
+	}
+	if (sets.length) return sets;
+
 	const urls = Array.from(new Set(html.match(ASSET_RE) ?? []));
 	if (!urls.length) return [];
 	const candidates = urls.map((url) => ({

@@ -72,13 +72,57 @@ describe('parseThePosterDbAssets', () => {
 	const assetB =
 		'https://images.theposterdb.com/prod/public/images/posters/optimized/movies/2578/anotherFileNameHere1234.jpg';
 
-	it('extracts and de-duplicates real asset URLs', () => {
+	// Two genuine cards taken from a real (authenticated) ThePosterDB title page — a
+	// <picture> with webp + jpeg <source> variants of the same poster, a numeric
+	// data-poster-id, an "uploaded by <user>" byline, and a link to that user's set.
+	function realCard(posterId: string, fileName: string, author: string, setId: string): string {
+		return `
+			<div class="col-6 col-lg-2 p-1">
+			<div class="hovereffect rounded-poster">
+				<picture>
+					<source class="w-100 rounded-poster" type="image/webp" srcset="https://images.theposterdb.com/prod/public/images/posters/optimized/movies/3624/${fileName}.webp">
+					<source class="w-100 rounded-poster" type="image/jpeg" srcset="https://images.theposterdb.com/prod/public/images/posters/optimized/movies/3624/${fileName}.jpg">
+					<img class="w-100 rounded-poster tpdb-poster" loading="lazy" src="/images/defaults/missing_poster.jpg">
+				</picture>
+				<div class="overlay rounded-poster" data-poster-id='${posterId}' data-poster-type='movie'>
+					<div class="row m-0 h-100 p-3">
+						<div class="col-11 p-0 pr-1 poster-title-correction">
+							<p class="p-0 mb-1 text-break">Final Destination (2000)</p>
+							<p class="uploaded-by text-white d-inline-block text-truncate w-100">by <a href="https://theposterdb.com/user/${author}">${author}</a></p>
+						</div>
+						<div class="col-1 p-0 d-flex flex-column align-items-center">
+							<a href="https://theposterdb.com/set/${setId}" class="badge badge-pill badge-primary mt-2 set_poster_count" title="Posters in Set">7</a>
+						</div>
+					</div>
+				</div>
+			</div>
+			</div>`;
+	}
+
+	it('groups real cards by contributor set and takes only the webp variant', () => {
+		const html =
+			realCard('883', 'lbzoHxi7bDQ3b6Ly3XK9wolkosbPhx2CPHQEj6Fg', 'cinemoire', '254') +
+			realCard('165947', '5zbUrqku3HOP6KCrXStZsgiV240EMAbnpMHRfIcV', 'XDM', '101438');
+		const sets = parseThePosterDbAssets(html);
+		expect(sets).toHaveLength(2);
+		expect(sets.map((s) => s.author)).toEqual(['cinemoire', 'XDM']);
+		// One candidate per set (the webp source only — not also the jpeg variant of the
+		// same poster, which is what previously showed up as a visual duplicate).
+		expect(sets.every((s) => s.candidates.length === 1)).toBe(true);
+		expect(sets[0].candidates[0].url).toBe(
+			'https://images.theposterdb.com/prod/public/images/posters/optimized/movies/3624/lbzoHxi7bDQ3b6Ly3XK9wolkosbPhx2CPHQEj6Fg.webp'
+		);
+		expect(sets[0].candidates[0].setAuthor).toBe('cinemoire');
+	});
+
+	it('falls back to a flat unattributed scrape when the card structure does not match', () => {
 		const html = `<img class="tpdb-poster" src="${assetA}">
 			<img class="tpdb-poster" src="${assetB}">
 			<a href="${assetA}">dup</a>`;
 		const sets = parseThePosterDbAssets(html);
 		expect(sets[0].candidates.map((c) => c.url)).toEqual([assetA, assetB]);
 		expect(sets[0].candidates.every((c) => c.kind === 'poster')).toBe(true);
+		expect(sets[0].author).toBeNull();
 	});
 
 	it('ignores the anonymous placeholder image', () => {
