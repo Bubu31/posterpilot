@@ -115,6 +115,28 @@ describe('parseThePosterDbAssets', () => {
 		expect(sets[0].candidates[0].setAuthor).toBe('cinemoire');
 	});
 
+	it('keys the set by the real ThePosterDB set id, not the individual poster id', () => {
+		const sets = parseThePosterDbAssets(
+			realCard('883', 'lbzoHxi7bDQ3b6Ly3XK9wolkosbPhx2CPHQEj6Fg', 'MBF', '13035')
+		);
+		expect(sets[0].setId).toBe('theposterdb-13035');
+		expect(sets[0].candidates[0].setId).toBe('theposterdb-13035');
+	});
+
+	it('produces the same setId for the same creator set across different titles', () => {
+		// Same contributor's set (13035), two different movies from that set's franchise —
+		// this is what lets the collection "suggested visual family" grouping recognize it's
+		// the same set covering multiple members, exactly like it already does for MediUX.
+		const batmanBegins = parseThePosterDbAssets(
+			realCard('2578', 'batmanBeginsFile', 'MBF', '13035')
+		)[0];
+		const darkKnight = parseThePosterDbAssets(
+			realCard('3844', 'darkKnightFile', 'MBF', '13035')
+		)[0];
+		expect(batmanBegins.setId).toBe(darkKnight.setId);
+		expect(batmanBegins.author).toBe(darkKnight.author);
+	});
+
 	it('falls back to a flat unattributed scrape when the card structure does not match', () => {
 		const html = `<img class="tpdb-poster" src="${assetA}">
 			<img class="tpdb-poster" src="${assetB}">
