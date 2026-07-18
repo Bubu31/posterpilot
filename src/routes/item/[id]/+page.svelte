@@ -688,7 +688,15 @@
 		return () => window.removeEventListener('keydown', handleReviewShortcut);
 	});
 
-	/** Materialize the exact plan before showing the separate confirmation action. */
+	/**
+	 * Materialize the exact plan, then apply it.
+	 *
+	 * The "apply and go to next review item" flow (`shouldAdvance`) still shows the
+	 * separate confirmation step: `canConfirmApplyAndNext` can legitimately block it
+	 * (partial/skipped plans) and the user should see that warning before advancing.
+	 * The plain single-item apply has no such gate, so there is nothing useful for a
+	 * second click to surface — fetch the preview and immediately confirm it.
+	 */
 	async function requestApply(shouldAdvance = false) {
 		if (!hasStaged) {
 			advanceAfterApply = false;
@@ -709,7 +717,22 @@
 				body: JSON.stringify({ method })
 			});
 			if (!res.ok) throw new Error(String(res.status));
-			applyPreview = await res.json();
+			const preview = (await res.json()) as NonNullable<typeof applyPreview>;
+			if (!shouldAdvance && preview.planId && preview.digest) {
+				const confirmRes = await fetch(`/api/items/${data.item.id}/apply`, {
+					method: 'POST',
+					headers: jsonHeaders,
+					body: JSON.stringify({ planId: preview.planId, digest: preview.digest })
+				});
+				if (!confirmRes.ok) throw new Error(String(confirmRes.status));
+				const result = (await confirmRes.json()) as { jobId: number };
+				jobId = result.jobId;
+				confirmApply = false;
+				applyPreview = null;
+				setMessage(m.item_working());
+				return;
+			}
+			applyPreview = preview;
 			confirmApply = true;
 		} catch {
 			advanceAfterApply = false;
