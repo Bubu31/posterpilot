@@ -25,7 +25,14 @@ if (restoreBootResult.status === 'rejected' || restoreBootResult.status === 'rol
 	);
 }
 
-export const databaseClient = createClient({ url: dataPaths.databaseUrl });
+// Plain SQLite rejects a write immediately (SQLITE_BUSY) instead of waiting when another
+// writer holds the lock. The actual fix for concurrent writers is serializeWrite (see
+// db/write-queue.ts) — a PRAGMA busy_timeout doesn't reliably survive this local sqlite3
+// client discarding and lazily reopening its native connection after every transaction(),
+// and even the client's own `timeout` option (which is supposed to apply to every
+// connection it opens) didn't hold up under genuinely concurrent writers in testing. Set
+// here anyway as a harmless secondary safety net for any write path serializeWrite misses.
+export const databaseClient = createClient({ url: dataPaths.databaseUrl, timeout: 5000 });
 
 export const db = drizzle(databaseClient, { schema });
 
@@ -34,15 +41,11 @@ let migrated = false;
 /** Apply pending migrations once per process. Called from hooks.server.ts on startup. */
 export async function migrateDb(): Promise<void> {
 	if (migrated) return;
-	// Provider discovery runs every provider concurrently, and each one writes its own
-	// outcome/candidates in a separate transaction. Plain SQLite rejects a write immediately
-	// (SQLITE_BUSY) instead of waiting when another writer holds the lock, so without WAL +
-	// a busy timeout, concurrent providers routinely fail each other's writes under normal
-	// use (e.g. `mediux discovery failed ... SQLITE_BUSY: database is locked`). In-memory
-	// test databases skip this — WAL needs a real file and tests don't have concurrent writers.
+	// WAL mode is persisted in the database file itself, so a single PRAGMA here (unlike
+	// the busy timeout above) is enough. In-memory test databases skip this — WAL needs a
+	// real file.
 	if (dataPaths.databaseFile) {
 		await databaseClient.execute('PRAGMA journal_mode = WAL;');
-		await databaseClient.execute('PRAGMA busy_timeout = 5000;');
 	}
 	await migrate(db, { migrationsFolder: './drizzle' });
 	migrated = true;
