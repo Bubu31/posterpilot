@@ -27,17 +27,6 @@ if (restoreBootResult.status === 'rejected' || restoreBootResult.status === 'rol
 
 export const databaseClient = createClient({ url: dataPaths.databaseUrl });
 
-// Provider discovery runs every provider concurrently, and each one writes its own
-// outcome/candidates in a separate transaction. Plain SQLite rejects a write immediately
-// (SQLITE_BUSY) instead of waiting when another writer holds the lock, so without WAL +
-// a busy timeout, concurrent providers routinely fail each other's writes under normal
-// use (e.g. `mediux discovery failed ... SQLITE_BUSY: database is locked`). In-memory
-// test databases skip this — WAL needs a real file and tests don't have concurrent writers.
-if (dataPaths.databaseFile) {
-	await databaseClient.execute('PRAGMA journal_mode = WAL;');
-	await databaseClient.execute('PRAGMA busy_timeout = 5000;');
-}
-
 export const db = drizzle(databaseClient, { schema });
 
 let migrated = false;
@@ -45,6 +34,16 @@ let migrated = false;
 /** Apply pending migrations once per process. Called from hooks.server.ts on startup. */
 export async function migrateDb(): Promise<void> {
 	if (migrated) return;
+	// Provider discovery runs every provider concurrently, and each one writes its own
+	// outcome/candidates in a separate transaction. Plain SQLite rejects a write immediately
+	// (SQLITE_BUSY) instead of waiting when another writer holds the lock, so without WAL +
+	// a busy timeout, concurrent providers routinely fail each other's writes under normal
+	// use (e.g. `mediux discovery failed ... SQLITE_BUSY: database is locked`). In-memory
+	// test databases skip this — WAL needs a real file and tests don't have concurrent writers.
+	if (dataPaths.databaseFile) {
+		await databaseClient.execute('PRAGMA journal_mode = WAL;');
+		await databaseClient.execute('PRAGMA busy_timeout = 5000;');
+	}
 	await migrate(db, { migrationsFolder: './drizzle' });
 	migrated = true;
 }
