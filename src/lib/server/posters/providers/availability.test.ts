@@ -8,7 +8,9 @@ const config = {
 	providerFanart: true,
 	providerThePosterDb: false,
 	tmdbKey: 'tmdb-key',
-	fanartKey: null
+	fanartKey: null,
+	thePosterDbUsername: null,
+	thePosterDbPassword: null
 } as AppConfig;
 
 describe('providerAvailability', () => {
@@ -20,5 +22,20 @@ describe('providerAvailability', () => {
 
 	it('requires the shared TMDB credential when TMDB artwork is enabled', () => {
 		expect(providerAvailability('tmdb', { ...config, tmdbKey: null })).toBe('missing_credential');
+	});
+
+	it('requires both ThePosterDB credentials once enabled', () => {
+		const enabled = { ...config, providerThePosterDb: true };
+		expect(providerAvailability('theposterdb', enabled)).toBe('missing_credential');
+		expect(providerAvailability('theposterdb', { ...enabled, thePosterDbUsername: 'me' })).toBe(
+			'missing_credential'
+		);
+		expect(
+			providerAvailability('theposterdb', {
+				...enabled,
+				thePosterDbUsername: 'me',
+				thePosterDbPassword: 'secret'
+			})
+		).toBe('available');
 	});
 });

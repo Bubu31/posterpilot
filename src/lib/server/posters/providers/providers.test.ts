@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { parseTmdbImages, parseFanart, parseThePosterDb } from './parse';
+import {
+	parseTmdbImages,
+	parseFanart,
+	parseThePosterDbAssets,
+	parseThePosterDbSearchResults
+} from './parse';
 
 describe('parseTmdbImages', () => {
 	it('builds poster + backdrop candidates in one set', () => {
@@ -61,20 +66,66 @@ describe('parseFanart', () => {
 	});
 });
 
-describe('parseThePosterDb', () => {
-	it('extracts and de-duplicates asset URLs', () => {
-		const html = `<img src="https://theposterdb.com/api/assets/111">
-			<img src="https://theposterdb.com/api/assets/222">
-			<a href="https://theposterdb.com/api/assets/111">dup</a>`;
-		const sets = parseThePosterDb(html);
-		expect(sets[0].candidates.map((c) => c.url)).toEqual([
-			'https://theposterdb.com/api/assets/111',
-			'https://theposterdb.com/api/assets/222'
-		]);
+describe('parseThePosterDbAssets', () => {
+	const assetA =
+		'https://images.theposterdb.com/prod/public/images/posters/optimized/movies/2578/psOBkRYwJVfMjLXtMQ9YJ36aOekJPMWs9Vv7PL0P.webp';
+	const assetB =
+		'https://images.theposterdb.com/prod/public/images/posters/optimized/movies/2578/anotherFileNameHere1234.jpg';
+
+	it('extracts and de-duplicates real asset URLs', () => {
+		const html = `<img class="tpdb-poster" src="${assetA}">
+			<img class="tpdb-poster" src="${assetB}">
+			<a href="${assetA}">dup</a>`;
+		const sets = parseThePosterDbAssets(html);
+		expect(sets[0].candidates.map((c) => c.url)).toEqual([assetA, assetB]);
 		expect(sets[0].candidates.every((c) => c.kind === 'poster')).toBe(true);
 	});
 
+	it('ignores the anonymous placeholder image', () => {
+		const html = `<img class="tpdb-poster" src="/images/defaults/missing_poster.jpg">`;
+		expect(parseThePosterDbAssets(html)).toEqual([]);
+	});
+
 	it('returns [] when no assets are present', () => {
-		expect(parseThePosterDb('<html>nothing</html>')).toEqual([]);
+		expect(parseThePosterDbAssets('<html>nothing</html>')).toEqual([]);
+	});
+});
+
+describe('parseThePosterDbSearchResults', () => {
+	it('extracts title, year and the poster-collection page URL, de-duplicated', () => {
+		const html = `
+			<div class="col-12 col-md-4 p-1">
+				<div class="btn-group d-flex flex-row">
+					<a class="btn btn-dark-lighter" href="https://theposterdb.com/posters/2578">
+						<strong>Batman Begins</strong> (2005)
+					</a>
+				</div>
+			</div>
+			<div class="col-12 col-md-4 p-1">
+				<div class="btn-group d-flex flex-row">
+					<a class="btn btn-dark-lighter" href="https://theposterdb.com/posters/2168448">
+						<strong>Batman: Operation Hamlet</strong> (2024)
+					</a>
+				</div>
+			</div>
+			<div class="col-12 col-md-4 p-1">
+				<div class="btn-group d-flex flex-row">
+					<a class="btn btn-dark-lighter" href="https://theposterdb.com/posters/2578">
+						<strong>Batman Begins</strong> (2005)
+					</a>
+				</div>
+			</div>`;
+		expect(parseThePosterDbSearchResults(html)).toEqual([
+			{ url: 'https://theposterdb.com/posters/2578', title: 'Batman Begins', year: 2005 },
+			{
+				url: 'https://theposterdb.com/posters/2168448',
+				title: 'Batman: Operation Hamlet',
+				year: 2024
+			}
+		]);
+	});
+
+	it('returns [] when no results are present', () => {
+		expect(parseThePosterDbSearchResults('<html>no results</html>')).toEqual([]);
 	});
 });

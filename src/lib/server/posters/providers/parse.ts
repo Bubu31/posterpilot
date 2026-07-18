@@ -105,11 +105,44 @@ export function parseFanart(json: unknown, mediaType: TmdbMediaType): ArtworkSet
 	return candidates.length ? [{ setId: 'fanarttv', author: null, candidates }] : [];
 }
 
-// ThePosterDB serves assets from /api/assets/<id>.
-const ASSET_RE = /https?:\/\/theposterdb\.com\/api\/assets\/\d+/g;
+/** A matching title found on a ThePosterDB search-results page. */
+export interface ThePosterDbSearchResult {
+	/** The title's poster-collection page, e.g. https://theposterdb.com/posters/2578 */
+	url: string;
+	title: string;
+	year: number | null;
+}
 
-/** Extract poster asset URLs from a ThePosterDB page into one set. */
-export function parseThePosterDb(html: string): ArtworkSet[] {
+// Search results link to each matching title's poster-collection page
+// (theposterdb.com/posters/<id>) with the title/year as the link text; they no longer
+// embed poster images directly (see parseThePosterDbAssets below).
+const SEARCH_RESULT_RE =
+	/href="(https:\/\/theposterdb\.com\/posters\/\d+)"[\s\S]{0,300}?<strong>([^<]+)<\/strong>\s*(?:\((\d{4})\))?/g;
+
+/** Extract matching titles (with their poster-collection page URL) from a search page. */
+export function parseThePosterDbSearchResults(html: string): ThePosterDbSearchResult[] {
+	const results: ThePosterDbSearchResult[] = [];
+	const seen = new Set<string>();
+	for (const match of html.matchAll(SEARCH_RESULT_RE)) {
+		const [, url, rawTitle, rawYear] = match;
+		if (seen.has(url)) continue;
+		seen.add(url);
+		results.push({
+			url,
+			title: rawTitle.trim(),
+			year: rawYear ? Number(rawYear) : null
+		});
+	}
+	return results;
+}
+
+// A title's poster-collection page serves real images from this CDN path once
+// authenticated; anonymous requests get a `missing_poster.jpg` placeholder instead.
+const ASSET_RE =
+	/https:\/\/images\.theposterdb\.com\/prod\/public\/images\/posters\/optimized\/(?:movies|shows)\/\d+\/[A-Za-z0-9_-]+\.(?:webp|jpe?g|png)/g;
+
+/** Extract real poster asset URLs from a ThePosterDB title/poster-collection page. */
+export function parseThePosterDbAssets(html: string): ArtworkSet[] {
 	const urls = Array.from(new Set(html.match(ASSET_RE) ?? []));
 	if (!urls.length) return [];
 	const candidates = urls.map((url) => ({

@@ -16,5 +16,8 @@ export function providerAvailability(id: ProviderId, config: AppConfig): Provide
 	if (!enabled) return 'disabled';
 	if (id === 'fanarttv' && !config.fanartKey) return 'missing_credential';
 	if (id === 'tmdb' && !config.tmdbKey) return 'missing_credential';
+	if (id === 'theposterdb' && (!config.thePosterDbUsername || !config.thePosterDbPassword)) {
+		return 'missing_credential';
+	}
 	return 'available';
 }
