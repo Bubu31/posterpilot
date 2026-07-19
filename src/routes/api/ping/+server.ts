@@ -19,13 +19,8 @@ export const GET: RequestHandler = async ({ url }) => {
 		headers: { 'User-Agent': BROWSER_USER_AGENT, Accept: 'text/html', Cookie: cookie },
 		retries: 1
 	});
-	const setLinks = [
-		...new Set(Array.from(html.matchAll(/theposterdb\.com\/set\/(\d+)/g)).map((m) => m[1]))
-	];
-	const titles = Array.from(html.matchAll(/<p class="p-0 mb-1 text-break">([^<]+)<\/p>/g))
-		.map((m) => m[1])
-		.slice(0, 30);
-	return text(
-		`len=${html.length}\n---set ids---\n${setLinks.join(', ')}\n---card titles---\n${titles.join('\n')}`
-	);
+	const slices = Array.from(html.matchAll(/posters\/\d+/g))
+		.slice(0, 3)
+		.map((m) => html.slice(Math.max(0, m.index! - 40), m.index! + 320));
+	return text(`len=${html.length}\n---result slices---\n${slices.join('\n\n=====\n\n')}`);
 };
