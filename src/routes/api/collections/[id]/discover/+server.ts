@@ -71,6 +71,13 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	// existing exact_set family engine then surfaces it across every matched member. Runs
 	// only when ThePosterDB is in scope and available; any failure is logged, never fatal.
 	const thePosterDbInScope = !providers || providers.includes('theposterdb');
+	await logEvent('info', 'discover', `ThePosterDB collection-set gate for "${collection.name}"`, {
+		collectionId: params.id,
+		serverInstanceId: active.id,
+		inScope: thePosterDbInScope,
+		availability: providerAvailability('theposterdb', config),
+		members: items.length
+	});
 	if (thePosterDbInScope && providerAvailability('theposterdb', config) === 'available') {
 		try {
 			const set = await fetchThePosterDbCollectionSet(
@@ -79,10 +86,15 @@ export const POST: RequestHandler = async ({ params, request }) => {
 				config
 			);
 			if (!set) {
-				await logEvent('info', 'discover', `ThePosterDB collection set: no match for "${collection.name}"`, {
-					collectionId: params.id,
-					serverInstanceId: active.id
-				});
+				await logEvent(
+					'info',
+					'discover',
+					`ThePosterDB collection set: no match for "${collection.name}"`,
+					{
+						collectionId: params.id,
+						serverInstanceId: active.id
+					}
+				);
 			} else if (set.matches.length) {
 				const weights = await getScoreWeights();
 				const score = scorePoster(

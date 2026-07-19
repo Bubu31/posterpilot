@@ -72,10 +72,7 @@ export function matchThePosterDbSetToMembers(
 		matches.push({ mediaItemId: member.mediaItemId, posterId: poster.posterId, url: poster.url });
 	};
 	const free = () => pool.filter((p) => !used.has(p.member.mediaItemId));
-	const preferYear = (
-		cands: typeof pool,
-		year: number | null
-	): (typeof pool)[number] | undefined =>
+	const preferYear = (cands: typeof pool, year: number | null): (typeof pool)[number] | undefined =>
 		(year !== null ? cands.find((c) => c.member.year === year) : undefined) ?? cands[0];
 
 	// Tier 1: exact normalized title.
