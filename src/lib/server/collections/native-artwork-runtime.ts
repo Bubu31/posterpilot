@@ -20,8 +20,10 @@ import {
 	type PreviewNativeCollectionArtworkInput
 } from './native-artwork-service';
 import { loadNativeCollectionArtworkContext } from './native-artwork-context';
+import type { NativeCollectionArtworkCandidate } from './native-artwork-candidates';
 import {
 	fetchNativeCollectionCandidateBytes,
+	fetchThePosterDbNativeCollectionArtworkCandidates,
 	fetchTmdbNativeCollectionArtworkCandidates
 } from './native-artwork-source';
 import {
@@ -52,12 +54,29 @@ function runtime(): NativeArtworkRuntime {
 		planStore: operationPlanStore,
 		snapshots,
 		ledger,
-		async loadCandidates(tmdbCollectionId) {
+		async loadCandidates(tmdbCollectionId, collectionName) {
 			const [config, weights] = await Promise.all([resolveConfig(), getScoreWeights()]);
 			if (!config.providerTmdb || !config.tmdbKey) {
 				throw new Error('native_collection_tmdb_unavailable');
 			}
-			return fetchTmdbNativeCollectionArtworkCandidates(tmdbCollectionId, config.tmdbKey, weights);
+			const tmdbCandidates = await fetchTmdbNativeCollectionArtworkCandidates(
+				tmdbCollectionId,
+				config.tmdbKey,
+				weights
+			);
+			// Best-effort: ThePosterDB has no collection-id mapping (title-search only), so a
+			// search miss, auth failure, or markup mismatch here must never take down the
+			// TMDB candidates this runs alongside.
+			let thePosterDbCandidates: NativeCollectionArtworkCandidate[] = [];
+			if (config.providerThePosterDb && config.thePosterDbUsername && config.thePosterDbPassword) {
+				thePosterDbCandidates = await fetchThePosterDbNativeCollectionArtworkCandidates(
+					collectionName,
+					tmdbCollectionId,
+					weights,
+					config
+				).catch(() => []);
+			}
+			return [...tmdbCandidates, ...thePosterDbCandidates];
 		},
 		loadCandidateBytes: fetchNativeCollectionCandidateBytes
 	});
