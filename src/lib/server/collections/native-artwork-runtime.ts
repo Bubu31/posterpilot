@@ -10,6 +10,7 @@ import { resolveConfig } from '$lib/server/config';
 import { resolveDataPaths } from '$lib/server/data-paths';
 import { db } from '$lib/server/db';
 import { assertMutationsAllowed } from '$lib/server/maintenance';
+import { logEvent } from '$lib/server/events';
 import { getScoreWeights } from '$lib/server/posters/score-weights';
 import { createDatabaseApplyServerRegistry } from '$lib/server/plans/apply-server-registry';
 import { operationPlanStore } from '$lib/server/plans/operation-plan-store';
@@ -69,14 +70,38 @@ function runtime(): NativeArtworkRuntime {
 			// TMDB candidates this runs alongside.
 			let thePosterDbCandidates: NativeCollectionArtworkCandidate[] = [];
 			if (config.providerThePosterDb && config.thePosterDbUsername && config.thePosterDbPassword) {
-				thePosterDbCandidates = await fetchThePosterDbNativeCollectionArtworkCandidates(
-					collectionName,
-					tmdbCollectionId,
-					weights,
-					config
-				).catch(() => []);
+				try {
+					thePosterDbCandidates = await fetchThePosterDbNativeCollectionArtworkCandidates(
+						collectionName,
+						tmdbCollectionId,
+						weights,
+						config
+					);
+					await logEvent(
+						'info',
+						'native_collection_discover',
+						`ThePosterDB collection search for "${collectionName}" found ${thePosterDbCandidates.length} candidate(s)`,
+						{ collectionName, tmdbCollectionId }
+					);
+				} catch (err) {
+					thePosterDbCandidates = [];
+					await logEvent(
+						'warn',
+						'native_collection_discover',
+						`ThePosterDB collection search failed for "${collectionName}"`,
+						{
+							collectionName,
+							tmdbCollectionId,
+							error: err instanceof Error ? err.message : String(err)
+						}
+					);
+				}
 			}
-			return [...tmdbCandidates, ...thePosterDbCandidates];
+			// Combine and re-sort by score so a strong ThePosterDB match isn't buried
+			// at the end of the (horizontally scrolling) candidate row behind TMDB's.
+			return [...tmdbCandidates, ...thePosterDbCandidates].sort(
+				(left, right) => right.score - left.score
+			);
 		},
 		loadCandidateBytes: fetchNativeCollectionCandidateBytes
 	});
