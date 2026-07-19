@@ -78,7 +78,12 @@ export const POST: RequestHandler = async ({ params, request }) => {
 				items.map((item) => ({ mediaItemId: item.id, title: item.title, year: item.year })),
 				config
 			);
-			if (set && set.matches.length) {
+			if (!set) {
+				await logEvent('info', 'discover', `ThePosterDB collection set: no match for "${collection.name}"`, {
+					collectionId: params.id,
+					serverInstanceId: active.id
+				});
+			} else if (set.matches.length) {
 				const weights = await getScoreWeights();
 				const score = scorePoster(
 					{ provider: 'theposterdb', width: null, height: null, kind: 'poster' },
@@ -115,13 +120,25 @@ export const POST: RequestHandler = async ({ params, request }) => {
 					`ThePosterDB collection set matched ${set.matches.length}/${items.length} members for "${collection.name}"`,
 					{ collectionId: params.id, serverInstanceId: active.id, setId: set.setId }
 				);
+			} else {
+				await logEvent(
+					'info',
+					'discover',
+					`ThePosterDB collection set for "${collection.name}" matched no members (set ${set.setId})`,
+					{ collectionId: params.id, serverInstanceId: active.id, setId: set.setId }
+				);
 			}
 		} catch (err) {
-			await logEvent('warn', 'discover', `ThePosterDB collection set failed for "${collection.name}"`, {
-				collectionId: params.id,
-				serverInstanceId: active.id,
-				error: err instanceof Error ? err.message : String(err)
-			});
+			await logEvent(
+				'warn',
+				'discover',
+				`ThePosterDB collection set failed for "${collection.name}"`,
+				{
+					collectionId: params.id,
+					serverInstanceId: active.id,
+					error: err instanceof Error ? err.message : String(err)
+				}
+			);
 		}
 	}
 

@@ -1,7 +1,10 @@
 import { fetchText } from '$lib/server/http';
 import type { AppConfig } from '$lib/server/config';
 import { BROWSER_USER_AGENT } from '$lib/server/ua';
-import { parseThePosterDbSearchResults, parseThePosterDbSet } from '$lib/server/posters/providers/parse';
+import {
+	parseThePosterDbSearchResults,
+	parseThePosterDbSet
+} from '$lib/server/posters/providers/parse';
 import {
 	getThePosterDbSession,
 	invalidateThePosterDbSession

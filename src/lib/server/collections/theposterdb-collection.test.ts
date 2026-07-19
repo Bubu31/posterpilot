@@ -38,6 +38,39 @@ describe('matchThePosterDbSetToMembers', () => {
 		]);
 	});
 
+	it('matches when the Jellyfin title contains extra words (token subset)', () => {
+		const posters = [
+			poster({ posterId: '487329', title: 'Cash Out', year: 2024 }),
+			poster({ posterId: '583344', title: 'High Rollers', year: 2025 })
+		];
+		// Jellyfin names the sequel "Cash Out 2: High Rollers" — exact title fails, subset wins,
+		// and the exact "Cash Out" match must claim the first member so subset can't steal it.
+		const members = [
+			{ mediaItemId: 68, title: 'Cash Out', year: 2024 },
+			{ mediaItemId: 220, title: 'Cash Out 2: High Rollers', year: 2025 }
+		];
+		expect(matchThePosterDbSetToMembers(posters, members).matches).toEqual([
+			{ mediaItemId: 68, posterId: '487329', url: 'https://images.theposterdb.com/Cash Out.webp' },
+			{
+				mediaItemId: 220,
+				posterId: '583344',
+				url: 'https://images.theposterdb.com/High Rollers.webp'
+			}
+		]);
+	});
+
+	it('falls back to equal year when titles do not overlap', () => {
+		const posters = [poster({ posterId: 'x', title: 'The Gentleman Thief', year: 2026 })];
+		const members = [{ mediaItemId: 9, title: 'Cash Out 3', year: 2026 }];
+		expect(matchThePosterDbSetToMembers(posters, members).matches).toEqual([
+			{
+				mediaItemId: 9,
+				posterId: 'x',
+				url: 'https://images.theposterdb.com/The Gentleman Thief.webp'
+			}
+		]);
+	});
+
 	it('disambiguates same-title members by year', () => {
 		const posters = [poster({ posterId: '2', title: 'The Office', year: 2005 })];
 		const members = [

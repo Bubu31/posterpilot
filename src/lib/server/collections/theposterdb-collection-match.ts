@@ -30,39 +30,81 @@ export function normalizeTitle(value: string): string {
 		.trim();
 }
 
+/** Significant tokens (length ≥ 2) of a normalized title, e.g. "cash out 2" → {cash,out}. */
+function tokens(normalized: string): Set<string> {
+	return new Set(normalized.split(' ').filter((t) => t.length >= 2));
+}
+
+/** True when every token of the smaller set is present in the larger — "high rollers" ⊆ "cash out high rollers". */
+function tokenSubset(a: Set<string>, b: Set<string>): boolean {
+	const [small, big] = a.size <= b.size ? [a, b] : [b, a];
+	if (!small.size) return false;
+	for (const t of small) if (!big.has(t)) return false;
+	return true;
+}
+
 /**
- * Map a set's `movie` posters onto collection members by normalized title, using the
- * year only to disambiguate when several members share a title. Each member is matched
- * at most once; the collection-type poster (if any) is returned separately for the
- * collection entity's own artwork. Pure — no IO — so it is unit-tested directly.
+ * Map a set's `movie` posters onto collection members. Jellyfin titles rarely equal
+ * ThePosterDB's exactly ("Cash Out 2: High Rollers" vs "High Rollers"), so matching runs
+ * in tiers, strongest first, each claiming a member at most once:
+ *   1. exact normalized title (year to disambiguate same-title members),
+ *   2. token subset (one title's words contained in the other) with year preference,
+ *   3. equal release year — safe within a franchise where each film has a distinct year.
+ * The collection-type poster (if any) is returned apart for the collection entity's own
+ * artwork. Pure — no IO — so it is unit-tested directly.
  */
 export function matchThePosterDbSetToMembers(
 	posters: ThePosterDbSetPoster[],
 	members: CollectionMemberRef[]
 ): Omit<ThePosterDbCollectionSet, 'setId'> {
 	const collectionPoster = posters.find((p) => p.type === 'collection') ?? null;
-	const byTitle = new Map<string, CollectionMemberRef[]>();
-	for (const member of members) {
-		const key = normalizeTitle(member.title);
-		if (!key) continue;
-		(byTitle.get(key) ?? byTitle.set(key, []).get(key)!).push(member);
-	}
+	const moviePosters = posters.filter((p) => p.type === 'movie');
+	const pool = members.map((m) => ({
+		member: m,
+		norm: normalizeTitle(m.title),
+		tokens: tokens(normalizeTitle(m.title))
+	}));
 
-	const usedMembers = new Set<number>();
+	const used = new Set<number>();
 	const matches: SetMemberMatch[] = [];
-	for (const poster of posters) {
-		if (poster.type !== 'movie') continue;
-		const group = byTitle.get(normalizeTitle(poster.title));
-		if (!group) continue;
-		// Prefer an exact-year member, else the first title match, skipping members already
-		// claimed by an earlier poster.
-		const pick =
-			(poster.year !== null
-				? group.find((m) => m.year === poster.year && !usedMembers.has(m.mediaItemId))
-				: undefined) ?? group.find((m) => !usedMembers.has(m.mediaItemId));
-		if (!pick) continue;
-		usedMembers.add(pick.mediaItemId);
-		matches.push({ mediaItemId: pick.mediaItemId, posterId: poster.posterId, url: poster.url });
+	const claim = (poster: ThePosterDbSetPoster, member: CollectionMemberRef) => {
+		used.add(member.mediaItemId);
+		matches.push({ mediaItemId: member.mediaItemId, posterId: poster.posterId, url: poster.url });
+	};
+	const free = () => pool.filter((p) => !used.has(p.member.mediaItemId));
+	const preferYear = (
+		cands: typeof pool,
+		year: number | null
+	): (typeof pool)[number] | undefined =>
+		(year !== null ? cands.find((c) => c.member.year === year) : undefined) ?? cands[0];
+
+	// Tier 1: exact normalized title.
+	const pending: ThePosterDbSetPoster[] = [];
+	for (const poster of moviePosters) {
+		const norm = normalizeTitle(poster.title);
+		const pick = preferYear(
+			free().filter((c) => c.norm === norm),
+			poster.year
+		);
+		if (pick) claim(poster, pick.member);
+		else pending.push(poster);
+	}
+	// Tier 2: token subset.
+	const stillPending: ThePosterDbSetPoster[] = [];
+	for (const poster of pending) {
+		const ptok = tokens(normalizeTitle(poster.title));
+		const pick = preferYear(
+			free().filter((c) => tokenSubset(ptok, c.tokens)),
+			poster.year
+		);
+		if (pick) claim(poster, pick.member);
+		else stillPending.push(poster);
+	}
+	// Tier 3: equal year.
+	for (const poster of stillPending) {
+		if (poster.year === null) continue;
+		const pick = free().find((c) => c.member.year === poster.year);
+		if (pick) claim(poster, pick.member);
 	}
 
 	return { collectionPosterUrl: collectionPoster?.url ?? null, matches };
