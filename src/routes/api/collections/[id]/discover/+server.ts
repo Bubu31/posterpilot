@@ -2,11 +2,16 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
-import { mediaItems } from '$lib/server/db/schema';
+import { mediaItems, posterCandidates } from '$lib/server/db/schema';
+import { serializeWrite } from '$lib/server/db/write-queue';
 import { resolveConfig } from '$lib/server/config';
 import { discoverForItem } from '$lib/server/posters/service';
 import { PROVIDERS } from '$lib/server/posters/providers';
+import { providerAvailability } from '$lib/server/posters/providers/availability';
+import { scorePoster } from '$lib/server/posters/score';
+import { getScoreWeights } from '$lib/server/posters/score-weights';
 import { getCollection } from '$lib/server/collections/queries';
+import { fetchThePosterDbCollectionSet } from '$lib/server/collections/theposterdb-collection';
 import { getActiveServerInstance } from '$lib/server/server-instances';
 import { logEvent } from '$lib/server/events';
 
@@ -54,6 +59,67 @@ export const POST: RequestHandler = async ({ params, request }) => {
 				serverInstanceId: active.id,
 				mediaItemId: item.id,
 				collectionId: params.id,
+				error: err instanceof Error ? err.message : String(err)
+			});
+		}
+	}
+
+	// ThePosterDB collection-set pass: per-member discovery above only title-searches each
+	// film independently, which rarely forms one shared "visual family". ThePosterDB's own
+	// collection set already IS one coordinated poster-per-film design, so fetch it once and
+	// inject each matched poster as a member candidate keyed by the real set id — the
+	// existing exact_set family engine then surfaces it across every matched member. Runs
+	// only when ThePosterDB is in scope and available; any failure is logged, never fatal.
+	const thePosterDbInScope = !providers || providers.includes('theposterdb');
+	if (thePosterDbInScope && providerAvailability('theposterdb', config) === 'available') {
+		try {
+			const set = await fetchThePosterDbCollectionSet(
+				collection.name,
+				items.map((item) => ({ mediaItemId: item.id, title: item.title, year: item.year })),
+				config
+			);
+			if (set && set.matches.length) {
+				const weights = await getScoreWeights();
+				const score = scorePoster(
+					{ provider: 'theposterdb', width: null, height: null, kind: 'poster' },
+					weights
+				);
+				const now = new Date();
+				const byId = new Map(items.map((item) => [item.id, item]));
+				await serializeWrite(() =>
+					db.insert(posterCandidates).values(
+						set.matches.map((match) => {
+							const item = byId.get(match.mediaItemId)!;
+							return {
+								serverInstanceId: active.id,
+								mediaItemId: match.mediaItemId,
+								setId: `theposterdb-set-${set.setId}`,
+								provider: 'theposterdb',
+								providerAssetId: match.posterId,
+								setAuthor: null,
+								url: match.url,
+								kind: 'poster' as const,
+								resolvedTmdbId: item.tmdbId,
+								resolvedMediaType: item.mediaType,
+								score,
+								active: true,
+								stale: false,
+								lastSeenAt: now
+							};
+						})
+					)
+				);
+				await logEvent(
+					'info',
+					'discover',
+					`ThePosterDB collection set matched ${set.matches.length}/${items.length} members for "${collection.name}"`,
+					{ collectionId: params.id, serverInstanceId: active.id, setId: set.setId }
+				);
+			}
+		} catch (err) {
+			await logEvent('warn', 'discover', `ThePosterDB collection set failed for "${collection.name}"`, {
+				collectionId: params.id,
+				serverInstanceId: active.id,
 				error: err instanceof Error ? err.message : String(err)
 			});
 		}

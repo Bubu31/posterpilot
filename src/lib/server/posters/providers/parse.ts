@@ -159,6 +159,50 @@ const ASSET_RE =
 const CARD_RE =
 	/<source class="w-100 rounded-poster" type="image\/webp" srcset="(https:\/\/images\.theposterdb\.com\/prod\/public\/images\/posters\/optimized\/(?:movies|shows)\/\d+\/[A-Za-z0-9_-]+\.webp)">[\s\S]{0,1500}?data-poster-id='(\d+)'[\s\S]{0,600}?uploaded-by[^>]*>by <a href="https:\/\/theposterdb\.com\/user\/[^"]+">([^<]+)<\/a>[\s\S]{0,600}?href="https:\/\/theposterdb\.com\/set\/(\d+)"/g;
 
+/** One poster on a ThePosterDB collection-set page ("More Posters From This Set"). */
+export interface ThePosterDbSetPoster {
+	/** Numeric poster id (data-poster-id / the download-asset id). */
+	posterId: string;
+	/** movie → a franchise member; collection → the collection entity's own poster. */
+	type: 'movie' | 'collection' | 'show';
+	url: string;
+	/** Title text on the card, minus the trailing "(YYYY)" when present. */
+	title: string;
+	year: number | null;
+	/** The contributor set id (theposterdb.com/set/<id>), shared by every card. */
+	setId: string;
+}
+
+// A collection-set page lists one poster per franchise film plus (usually) one
+// collection-type poster for the collection entity. Each card carries the film title +
+// year, the poster type, the asset URL, and the shared set id — everything needed to map
+// a set poster onto the matching collection member. Note this markup differs from a
+// title page's cards (double-quoted data-poster-id, a data-poster-type attribute), which
+// is why CARD_RE above does not match here and a dedicated parser is required. Bounded
+// lookaheads keep a malformed card from binding to the next card's fields.
+const SET_CARD_RE =
+	/type="image\/webp" srcset="(https:\/\/images\.theposterdb\.com\/prod\/public\/images\/posters\/optimized\/(?:movies|shows|collections)\/\d+\/[A-Za-z0-9_-]+\.webp)">[\s\S]{0,800}?data-poster-id="(\d+)" data-poster-type="(movie|collection|show)"[\s\S]{0,400}?<p class="p-0 mb-1 text-break">([^<]+)<\/p>[\s\S]{0,600}?href="https:\/\/theposterdb\.com\/set\/(\d+)"/g;
+
+/** Split a card title like "Cash Out (2024)" into name + year (year null when absent). */
+function splitTitleYear(raw: string): { title: string; year: number | null } {
+	const trimmed = raw.trim();
+	const m = /^(.*\S)\s*\((\d{4})\)$/.exec(trimmed);
+	return m ? { title: m[1].trim(), year: Number(m[2]) } : { title: trimmed, year: null };
+}
+
+/** Extract every poster (with its film title/year and type) from a ThePosterDB set page. */
+export function parseThePosterDbSet(html: string): ThePosterDbSetPoster[] {
+	const posters: ThePosterDbSetPoster[] = [];
+	const seen = new Set<string>();
+	for (const [, url, posterId, type, rawTitle, setId] of html.matchAll(SET_CARD_RE)) {
+		if (seen.has(posterId)) continue;
+		seen.add(posterId);
+		const { title, year } = splitTitleYear(rawTitle);
+		posters.push({ posterId, type: type as ThePosterDbSetPoster['type'], url, title, year, setId });
+	}
+	return posters;
+}
+
 /** Extract real poster asset URLs (grouped by contributor set) from a ThePosterDB title page. */
 export function parseThePosterDbAssets(html: string): ArtworkSet[] {
 	const seenPosterIds = new Set<string>();
