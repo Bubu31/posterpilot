@@ -50,4 +50,24 @@ describe('parseThePosterDbSet', () => {
 	it('returns [] on markup with no set cards', () => {
 		expect(parseThePosterDbSet('<html><body>nothing</body></html>')).toEqual([]);
 	});
+
+	it('matches the live server markup that single-quotes data-poster attributes', () => {
+		// The live /set/<id> page uses single quotes (browser "Save As" rewrites them to double).
+		const singleQuoted = `
+			<source class="w-100 rounded-poster" type="image/webp" srcset="https://images.theposterdb.com/prod/public/images/posters/optimized/movies/2084864/abc.webp">
+			<div class="overlay rounded-poster" data-poster-id='487329' data-poster-type='movie' data-mobile-click="false">
+				<p class="p-0 mb-1 text-break">Cash Out (2024)</p>
+				<a href="https://theposterdb.com/set/324469" class="set_poster_count">4</a>
+			</div>`;
+		expect(parseThePosterDbSet(singleQuoted)).toEqual([
+			{
+				posterId: '487329',
+				type: 'movie',
+				url: 'https://images.theposterdb.com/prod/public/images/posters/optimized/movies/2084864/abc.webp',
+				title: 'Cash Out',
+				year: 2024,
+				setId: '324469'
+			}
+		]);
+	});
 });

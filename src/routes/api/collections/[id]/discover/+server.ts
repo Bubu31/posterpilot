@@ -71,13 +71,6 @@ export const POST: RequestHandler = async ({ params, request }) => {
 	// existing exact_set family engine then surfaces it across every matched member. Runs
 	// only when ThePosterDB is in scope and available; any failure is logged, never fatal.
 	const thePosterDbInScope = !providers || providers.includes('theposterdb');
-	await logEvent('info', 'discover', `ThePosterDB collection-set gate for "${collection.name}"`, {
-		collectionId: params.id,
-		serverInstanceId: active.id,
-		inScope: thePosterDbInScope,
-		availability: providerAvailability('theposterdb', config),
-		members: items.length
-	});
 	if (thePosterDbInScope && providerAvailability('theposterdb', config) === 'available') {
 		try {
 			const set = await fetchThePosterDbCollectionSet(

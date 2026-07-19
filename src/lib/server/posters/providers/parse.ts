@@ -180,8 +180,11 @@ export interface ThePosterDbSetPoster {
 // title page's cards (double-quoted data-poster-id, a data-poster-type attribute), which
 // is why CARD_RE above does not match here and a dedicated parser is required. Bounded
 // lookaheads keep a malformed card from binding to the next card's fields.
+// Attribute quoting differs by page: a browser-saved copy normalizes to double quotes,
+// but the live server markup uses single quotes on data-poster-id / data-poster-type —
+// so match either with ['"].
 const SET_CARD_RE =
-	/type="image\/webp" srcset="(https:\/\/images\.theposterdb\.com\/prod\/public\/images\/posters\/optimized\/(?:movies|shows|collections)\/\d+\/[A-Za-z0-9_-]+\.webp)">[\s\S]{0,800}?data-poster-id="(\d+)" data-poster-type="(movie|collection|show)"[\s\S]{0,400}?<p class="p-0 mb-1 text-break">([^<]+)<\/p>[\s\S]{0,600}?href="https:\/\/theposterdb\.com\/set\/(\d+)"/g;
+	/type="image\/webp" srcset="(https:\/\/images\.theposterdb\.com\/prod\/public\/images\/posters\/optimized\/(?:movies|shows|collections)\/\d+\/[A-Za-z0-9_-]+\.webp)">[\s\S]{0,800}?data-poster-id=['"](\d+)['"] data-poster-type=['"](movie|collection|show)['"][\s\S]{0,400}?<p class="p-0 mb-1 text-break">([^<]+)<\/p>[\s\S]{0,600}?href="https:\/\/theposterdb\.com\/set\/(\d+)"/g;
 
 /** Split a card title like "Cash Out (2024)" into name + year (year null when absent). */
 function splitTitleYear(raw: string): { title: string; year: number | null } {
