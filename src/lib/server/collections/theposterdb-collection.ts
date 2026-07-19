@@ -81,17 +81,27 @@ export async function fetchThePosterDbCollectionSet(
 		if (!match) return null;
 	}
 
-	let posters = parseThePosterDbSet(await fetchAuthenticated(match.url, cookie, config));
-	if (!posters.length) {
-		invalidateThePosterDbSession();
-		cookie = await getThePosterDbSession(config.thePosterDbUsername, config.thePosterDbPassword);
-		if (!cookie) return null;
-		posters = parseThePosterDbSet(
-			await fetchAuthenticated(match.url, cookie, config, { forceRefresh: true })
-		);
-		if (!posters.length) return null;
-	}
+	// match.url is the collection's poster LISTING (one collection poster per contributor),
+	// not a per-film set. Each listing card links to that contributor's set (/set/<id>);
+	// only some sets also carry a poster per franchise film. Fetch the candidate sets and
+	// keep the one that covers the most members. Bounded so a large listing can't fan out.
+	const listingHtml = await fetchAuthenticated(match.url, cookie, config);
+	const setIds = [...new Set(Array.from(listingHtml.matchAll(/\/set\/(\d+)/g)).map((m) => m[1]))];
+	if (!setIds.length) return null;
 
-	const mapped = matchThePosterDbSetToMembers(posters, members);
-	return { setId: posters[0].setId, ...mapped };
+	let best: ThePosterDbCollectionSet | null = null;
+	for (const setId of setIds.slice(0, MAX_SETS_TO_TRY)) {
+		const posters = parseThePosterDbSet(
+			await fetchAuthenticated(`${BASE_URL}/set/${setId}`, cookie, config)
+		);
+		if (!posters.length) continue;
+		const mapped = matchThePosterDbSetToMembers(posters, members);
+		const candidate: ThePosterDbCollectionSet = { setId: posters[0].setId, ...mapped };
+		if (!best || candidate.matches.length > best.matches.length) best = candidate;
+		if (best.matches.length >= members.length) break; // full coverage — stop early
+	}
+	return best;
 }
+
+/** Cap how many contributor sets we open per collection to bound outbound requests. */
+const MAX_SETS_TO_TRY = 6;
