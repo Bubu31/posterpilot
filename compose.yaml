@@ -1,0 +1,28 @@
+---
+services:
+  posterpilot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: posterpilot:git-${POSTERPILOT_TAG:-latest}
+    pull_policy: build
+    container_name: posterpilot
+    environment:
+      - SERVER_TYPE=jellyfin
+      - JELLYFIN_URL=http://jellyfin:8096
+      - JELLYFIN_API_KEY=${JELLYFIN_API_KEY}
+    volumes:
+      - /var/lib/posterpilot:/data
+    networks:
+      - traefik-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.posterpilot.rule=Host(`posterpilot.busolin.fr`)"
+      - "traefik.http.routers.posterpilot.entrypoints=websecure"
+      - "traefik.http.routers.posterpilot.tls.certresolver=letsencrypt"
+      - "traefik.http.services.posterpilot.loadbalancer.server.port=3000"
+    restart: unless-stopped
+
+networks:
+  traefik-net:
+    external: true
